@@ -1,0 +1,52 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js build output & cache
+/.next/
+/out/
+build/
+dist/
+
+# Environment files containing secrets
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# Allow example environment file to be tracked
+!.env.example
+
+# Debug and runtime logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# TypeScript build info cache
+*.tsbuildinfo
+
+# Vercel project configuration
+.vercel
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
