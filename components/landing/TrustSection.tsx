@@ -37,12 +37,12 @@ export default function TrustSection() {
   }, []);
 
   const logos = [
-    { name: 'TechNova', symbol: '▲', industry: 'Applied AI' },
-    { name: 'Nova Systems', symbol: '⚡', industry: 'Cloud Infrastructure' },
-    { name: 'Vertex Labs', symbol: '◈', industry: 'HCI & UX Design' },
-    { name: 'BluePeak', symbol: '◆', industry: 'Fintech Payments' },
-    { name: 'Nexora', symbol: '✦', industry: 'Renewable CleanTech' },
-    { name: 'CloudWorks', symbol: '☁', industry: 'DevOps & SRE' },
+    { name: 'Ethio Telecom', symbol: 'ET', industry: 'Telecommunications & ICT' },
+    { name: 'Ethiopian Airlines', symbol: 'EA', industry: 'Aviation & Engineering' },
+    { name: 'Commercial Bank of Ethiopia', symbol: 'CBE', industry: 'Banking & Finance' },
+    { name: 'Chapa', symbol: 'CP', industry: 'Fintech & Payments' },
+    { name: 'Gebeya', symbol: 'GB', industry: 'EdTech & Software' },
+    { name: 'Dashen Bank', symbol: 'DB', industry: 'Banking & Digital Finance' },
   ];
 
   return (
@@ -52,7 +52,7 @@ export default function TrustSection() {
         {/* Company Logos Grid */}
         <div className="text-center mb-6">
           <p className="text-xs uppercase tracking-widest font-extrabold text-brand-muted mb-4">
-            Trusted by ambitious teams and future professionals worldwide
+            Connecting ambitious Ethiopian university talent with verified organizations
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 items-center justify-center">
             {logos.map((logo) => (
@@ -80,7 +80,7 @@ export default function TrustSection() {
 
             {/* 1. Active Students & Grads */}
             <div className="flex flex-col items-center">
-              <div className="w-11 h-11 rounded-2xl bg-brand-tint flex items-center justify-center text-brand-sky mb-2 shadow-subtle">
+              <div className="w-12 h-12 rounded-2xl bg-brand-tint flex items-center justify-center text-brand-sky mb-3 shadow-subtle">
                 <Users className="w-5 h-5" />
               </div>
               {isLoading ? (
@@ -93,18 +93,20 @@ export default function TrustSection() {
                   <span className="font-heading font-black text-3xl sm:text-4xl text-brand-navy tracking-tight">
                     {stats.studentsCount}
                   </span>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
-                    {stats.studentsCount === 1 ? 'Active Student Innovator' : 'Active Students & Grads'}
+                  <span className="text-sm font-bold text-brand-navy mt-1">
+                    {stats.studentsCount === 1 ? 'Student Innovator' : 'Student Innovators'}
                   </span>
+                  <span className="text-xs text-brand-muted">Active university talent</span>
                 </>
               ) : (
                 <>
                   <span className="font-heading font-black text-2xl sm:text-3xl text-brand-navy tracking-tight">
-                    Growing
+                    Active
                   </span>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
-                    Growing our community
+                  <span className="text-sm font-bold text-brand-navy mt-1">
+                    Student Talent
                   </span>
+                  <span className="text-xs text-brand-muted">University innovators</span>
                 </>
               )}
             </div>
@@ -112,7 +114,7 @@ export default function TrustSection() {
             {/* 2. Forward-Thinking Companies */}
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-2xl bg-brand-tint flex items-center justify-center text-brand-sky mb-3 shadow-subtle">
-                <Building className="w-6 h-6" />
+                <Building className="w-5 h-5" />
               </div>
               {isLoading ? (
                 <div className="space-y-2 py-1">
@@ -124,18 +126,20 @@ export default function TrustSection() {
                   <span className="font-heading font-black text-3xl sm:text-4xl text-brand-navy tracking-tight">
                     {stats.companiesCount}
                   </span>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
-                    {stats.companiesCount === 1 ? 'Forward-Thinking Employer' : 'Forward-Thinking Companies'}
+                  <span className="text-sm font-bold text-brand-navy mt-1">
+                    {stats.companiesCount === 1 ? 'Hiring Partner' : 'Hiring Partners'}
                   </span>
+                  <span className="text-xs text-brand-muted">Verified tech employers</span>
                 </>
               ) : (
                 <>
                   <span className="font-heading font-black text-2xl sm:text-3xl text-brand-navy tracking-tight">
-                    Growing
+                    Verified
                   </span>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
-                    Growing our community
+                  <span className="text-sm font-bold text-brand-navy mt-1">
+                    Hiring Partners
                   </span>
+                  <span className="text-xs text-brand-muted">Forward-thinking teams</span>
                 </>
               )}
             </div>
@@ -143,7 +147,7 @@ export default function TrustSection() {
             {/* 3. Curated Internships */}
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-2xl bg-brand-tint flex items-center justify-center text-brand-sky mb-3 shadow-subtle">
-                <Briefcase className="w-6 h-6" />
+                <Briefcase className="w-5 h-5" />
               </div>
               {isLoading ? (
                 <div className="space-y-2 py-1">
@@ -155,26 +159,28 @@ export default function TrustSection() {
                   <span className="font-heading font-black text-3xl sm:text-4xl text-brand-navy tracking-tight">
                     {stats.internshipsCount}
                   </span>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
+                  <span className="text-sm font-bold text-brand-navy mt-1">
                     {stats.internshipsCount === 1 ? 'Curated Opportunity' : 'Curated Internships'}
                   </span>
+                  <span className="text-xs text-brand-muted">Published & verified roles</span>
                 </>
               ) : (
                 <>
                   <span className="font-heading font-black text-2xl sm:text-3xl text-brand-navy tracking-tight">
-                    Growing
+                    Curated
                   </span>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
-                    Growing our community
+                  <span className="text-sm font-bold text-brand-navy mt-1">
+                    Open Positions
                   </span>
+                  <span className="text-xs text-brand-muted">High-impact cohorts</span>
                 </>
               )}
             </div>
 
-            {/* 4. Honest Platform Metric (Replacing fabricated satisfaction percentage) */}
+            {/* 4. Matching & Tracking Commitment */}
             <div className="flex flex-col items-center">
               <div className="w-12 h-12 rounded-2xl bg-brand-tint flex items-center justify-center text-brand-sky mb-3 shadow-subtle">
-                <Sparkles className="w-6 h-6 text-brand-sky" />
+                <Sparkles className="w-5 h-5 text-brand-sky" />
               </div>
               {isLoading ? (
                 <div className="space-y-2 py-1">
@@ -185,11 +191,12 @@ export default function TrustSection() {
                 <>
                   <div className="inline-flex items-center gap-1.5 font-heading font-black text-2xl sm:text-3xl text-brand-navy tracking-tight">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Active Cohort</span>
+                    <span>100%</span>
                   </div>
-                  <span className="text-sm font-semibold text-brand-muted mt-1">
-                    Growing our community
+                  <span className="text-sm font-bold text-brand-navy mt-1">
+                    Status Transparency
                   </span>
+                  <span className="text-xs text-brand-muted">Zero applicant black holes</span>
                 </>
               )}
             </div>

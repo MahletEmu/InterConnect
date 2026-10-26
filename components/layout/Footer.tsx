@@ -47,7 +47,7 @@ export default function Footer() {
               </span>
             </Link>
 
-            <p className="text-brand-tint/70 text-sm leading-relaxed max-w-sm">
+            <p className="text-slate-300 text-sm leading-relaxed max-w-sm">
               Connecting ambitious talent with companies building the future. A smart, transparent platform bridging high-growth tech companies with university student innovators.
             </p>
 
@@ -82,24 +82,6 @@ export default function Footer() {
                 <Twitter className="w-4 h-4" />
               </a>
               <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noreferrer"
-                className="w-9 h-9 rounded-full bg-brand-navyLight hover:bg-brand-sky transition-colors flex items-center justify-center text-white"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noreferrer"
-                className="w-9 h-9 rounded-full bg-brand-navyLight hover:bg-brand-sky transition-colors flex items-center justify-center text-white"
-                aria-label="YouTube"
-              >
-                <Youtube className="w-4 h-4" />
-              </a>
-              <a
                 href="https://github.com"
                 target="_blank"
                 rel="noreferrer"
@@ -111,103 +93,88 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Column 1: PLATFORM */}
+          {/* Column 1: DISCOVER */}
           <div>
             <h4 className="text-xs uppercase tracking-widest text-brand-sky font-bold mb-4">
-              Platform
+              Discover
             </h4>
-            <ul className="flex flex-col gap-2.5 text-sm text-brand-tint/70">
+            <ul className="flex flex-col gap-2.5 text-sm text-slate-300">
               <li>
-                <Link href="/students" className="hover:text-white transition-colors">
-                  For Students
+                <Link href="/internships" className="hover:text-white transition-colors">
+                  Find Internships
                 </Link>
               </li>
               <li>
                 <Link href="/companies" className="hover:text-white transition-colors">
-                  For Companies
-                </Link>
-              </li>
-              <li>
-                <Link href="/internships" className="hover:text-white transition-colors">
-                  Internships Marketplace
-                </Link>
-              </li>
-              <li>
-                <Link href="/#how-it-works" className="hover:text-white transition-colors">
-                  How It Works
+                  Explore Companies
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard/student" className="hover:text-white transition-colors">
-                  Student Portal
+                  Student Dashboard
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/company" className="hover:text-white transition-colors">
-                  Employer ATS
+                <Link href="/dashboard/student/saved" className="hover:text-white transition-colors">
+                  Saved Opportunities
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 2: RESOURCES */}
+          {/* Column 2: STUDENT RESOURCES */}
           <div>
             <h4 className="text-xs uppercase tracking-widest text-brand-sky font-bold mb-4">
-              Resources
+              Students
             </h4>
-            <ul className="flex flex-col gap-2.5 text-sm text-brand-tint/70">
-              <li>
-                <Link href="/about" className="hover:text-white transition-colors">
-                  Career Guide
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-white transition-colors">
-                  Interview Mastery Tips
-                </Link>
-              </li>
+            <ul className="flex flex-col gap-2.5 text-sm text-slate-300">
               <li>
                 <Link href="/dashboard/student/profile" className="hover:text-white transition-colors">
-                  Resume & Portfolio Studio
+                  Profile & CV Studio
                 </Link>
               </li>
               <li>
-                <Link href="/companies" className="hover:text-white transition-colors">
-                  Employer Hiring Playbook
+                <Link href="/dashboard/student/applications" className="hover:text-white transition-colors">
+                  Application Tracker
+                </Link>
+              </li>
+              <li>
+                <Link href="/register" className="hover:text-white transition-colors">
+                  Create Student Account
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className="hover:text-white transition-colors">
+                  Student Sign In
                 </Link>
               </li>
               <li>
                 <Link href="/about" className="hover:text-white transition-colors">
-                  Help Center & FAQ
+                  Platform Guide
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: COMPANY */}
+          {/* Column 3: ABOUT INTERCONNECT */}
           <div>
             <h4 className="text-xs uppercase tracking-widest text-brand-sky font-bold mb-4">
-              Company
+              InterConnect
             </h4>
-            <ul className="flex flex-col gap-2.5 text-sm text-brand-tint/70">
+            <ul className="flex flex-col gap-2.5 text-sm text-slate-300">
               <li>
                 <Link href="/about" className="hover:text-white transition-colors">
-                  About Us
+                  About InterConnect
                 </Link>
               </li>
               <li>
                 <Link href="/about" className="hover:text-white transition-colors">
-                  Our Mission & Values
+                  Mission & Vision
                 </Link>
               </li>
               <li>
                 <Link href="/about" className="hover:text-white transition-colors">
                   Contact & Support
-                </Link>
-              </li>
-              <li>
-                <Link href="/internships" className="hover:text-white transition-colors">
-                  Careers at InterConnect
                 </Link>
               </li>
               <li>
@@ -225,12 +192,12 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-brand-tint/60 gap-4">
-          <p>© 2026 InterConnect Technologies Inc. All rights reserved.</p>
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+          <p>© 2026 InterConnect. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <span>Designed for Modern Career Acceleration</span>
+            <span>Connecting University Students in Ethiopia</span>
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-sky" />
-            <span>Addis Ababa · San Francisco · Global</span>
+            <span>Addis Ababa, Ethiopia</span>
           </div>
         </div>
       </div>

@@ -12,7 +12,7 @@ export default function TestimonialsSection() {
         'I applied to internships for months without knowing which companies were actually a good fit. InterConnect helped me discover an opportunity that matched my skills perfectly. I received an offer from TechNova within two weeks of applying.',
       name: 'Maya Tesfaye',
       role: 'Computer Science Student',
-      university: 'Stanford University (Formerly AAiT)',
+      university: 'Addis Ababa University (AAiT)',
       image: '/images/testimonial-student.jpg',
       badge: 'Student Success Story',
     },
@@ -62,7 +62,7 @@ export default function TestimonialsSection() {
           <span className="text-xs uppercase tracking-widest font-extrabold text-brand-sky bg-brand-tint px-3 py-1 rounded-full border border-brand-sky/20">
             Real Stories & Impact
           </span>
-          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy mt-2.5 mb-2 tracking-tight">
+          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy mt-2.5 mb-2 tracking-tight">
             What Happens When Talent Meets Opportunity
           </h2>
           <p className="text-brand-muted text-sm sm:text-base">

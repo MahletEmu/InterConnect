@@ -11,7 +11,7 @@ export default function SmartMatchSection() {
   const matchData = {
     alex: {
       studentName: 'Alex Morgan',
-      role: 'B.Sc. Computer Science',
+      role: 'B.Sc. Software Engineering (AAiT)',
       avatar: '/images/hero-student.jpg',
       targetRole: 'Software Engineering Intern',
       targetCompany: 'Nova Systems',
@@ -19,20 +19,20 @@ export default function SmartMatchSection() {
       score: 94,
       breakdown: [
         { label: 'Skills Match (TS, React, Python, SQL)', pct: 96 },
-        { label: 'Education & Degree Level (CS Junior)', pct: 94 },
-        { label: 'Location & Work Preference (Remote)', pct: 92 },
+        { label: 'University Department (Software Eng)', pct: 94 },
+        { label: 'Location Preference (Addis Ababa / Hybrid)', pct: 92 },
         { label: 'Interest & Capstone Alignment (Systems)', pct: 94 },
       ],
       tags: ['TypeScript', 'React', 'Python', 'PostgreSQL', 'Docker'],
       reasons: [
         'Demonstrated GitHub project in CRDT real-time systems',
         'Academic coursework in Distributed Systems & Databases',
-        'Preference for remote distributed workflows',
+        'Preference for Addis Ababa & hybrid workflows',
       ],
     },
     maya: {
       studentName: 'Maya Tesfaye',
-      role: 'B.S. Computer Science (Stanford)',
+      role: 'B.Sc. Computer Science (ASTU)',
       avatar: '/images/testimonial-student.jpg',
       targetRole: 'AI Research & ML Systems Intern',
       targetCompany: 'TechNova',
@@ -40,15 +40,15 @@ export default function SmartMatchSection() {
       score: 96,
       breakdown: [
         { label: 'Skills Match (Python, PyTorch, RAG)', pct: 98 },
-        { label: 'Education & Academic Record (GPA 3.92)', pct: 96 },
-        { label: 'Location Preference (Hybrid / SF)', pct: 95 },
+        { label: 'Academic Record & Department (CS Senior)', pct: 96 },
+        { label: 'Location Preference (Addis Ababa / On-site)', pct: 95 },
         { label: 'Research Trajectory Alignment', pct: 95 },
       ],
       tags: ['PyTorch', 'Python', 'Transformers', 'Algorithms', 'Linear Algebra'],
       reasons: [
         'Hands-on experience profiling neural inference pipelines',
         'Verified university math and optimization background',
-        'Strong publication and open-source contributions',
+        'Strong open-source project contributions',
       ],
     },
   };
@@ -56,7 +56,7 @@ export default function SmartMatchSection() {
   const active = matchData[selectedCandidate];
 
   return (
-    <section id="matching" className="relative py-12 sm:py-14 bg-brand-canvas overflow-hidden">
+    <section id="matching" className="relative py-12 sm:py-14 bg-brand-canvas overflow-hidden scroll-mt-20">
       {/* Background radial gradient blobs */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-brand-tint/60 via-brand-sky/10 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
 
@@ -66,9 +66,9 @@ export default function SmartMatchSection() {
         <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-tint border border-brand-sky/20 text-xs font-extrabold uppercase tracking-widest text-brand-sky">
             <Sparkles className="w-3.5 h-3.5" />
-            Deterministic Precision
+            Intelligent Matching
           </span>
-          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy mt-2.5 mb-2.5 tracking-tight">
+          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy mt-2.5 mb-2.5 tracking-tight">
             Stop Searching. <span className="text-brand-sky">Start Matching.</span>
           </h2>
           <p className="text-brand-muted text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">

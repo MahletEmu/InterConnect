@@ -7,6 +7,7 @@ import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import DashboardTopbar from '@/components/layout/DashboardTopbar';
 import { useInterConnect } from '@/lib/context/InterConnectContext';
 import { supabase } from '@/lib/supabase';
+import StudentAvatar from '@/components/student/StudentAvatar';
 import {
   Briefcase,
   Users,
@@ -45,7 +46,7 @@ export default function CompanyDashboardPage() {
           const mapped = data.map((sp: any) => ({
             id: sp.id,
             name: sp.profiles?.full_name || 'Student Candidate',
-            avatar: sp.profiles?.avatar_url || '/images/hero-student.jpg',
+            avatar: sp.profiles?.avatar_url && !sp.profiles.avatar_url.includes('hero-student') ? sp.profiles.avatar_url : '',
             university: sp.university || 'University Student',
             completionRate: sp.profile_completion || 80,
             skills: Array.isArray(sp.student_skills)
@@ -241,14 +242,12 @@ export default function CompanyDashboardPage() {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2.5">
-                        <div className="relative w-10 h-10 rounded-xl overflow-hidden border border-brand-sky">
-                          <Image
-                            src={candidate.avatar}
-                            alt={candidate.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
+                        <StudentAvatar
+                          avatar={candidate.avatar}
+                          name={candidate.name}
+                          size="md"
+                          className="rounded-xl border border-brand-sky"
+                        />
                         <span className="text-[11px] font-black bg-brand-tint text-brand-navy px-2 py-0.5 rounded-full">
                           {candidate.completionRate}% Profile
                         </span>

@@ -7,6 +7,7 @@ import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import DashboardTopbar from '@/components/layout/DashboardTopbar';
 import { supabase } from '@/lib/supabase';
 import { Student } from '@/types';
+import StudentAvatar from '@/components/student/StudentAvatar';
 import {
   Search,
   Users,
@@ -53,7 +54,7 @@ export default function CompanyCandidatesPage() {
             profileId: sp.profile_id,
             name: sp.profiles?.full_name || 'Student Candidate',
             email: sp.profiles?.email || '',
-            avatar: sp.profiles?.avatar_url || '/images/hero-student.jpg',
+            avatar: sp.profiles?.avatar_url && !sp.profiles.avatar_url.includes('hero-student') ? sp.profiles.avatar_url : '',
             headline: sp.field_of_study ? `${sp.field_of_study} Student` : 'Student Innovator',
             university: sp.university || 'University Student',
             degree: sp.field_of_study || 'B.Sc. Student',
@@ -171,14 +172,11 @@ export default function CompanyCandidatesPage() {
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border-2 border-brand-sky bg-brand-navy shrink-0 shadow-2xs">
-                          <Image
-                            src={stud.avatar}
-                            alt={stud.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
+                        <StudentAvatar
+                          avatar={stud.avatar}
+                          name={stud.name}
+                          size="lg"
+                        />
                         <div>
                           <h3 className="font-heading font-extrabold text-base text-brand-navy">
                             {stud.name}

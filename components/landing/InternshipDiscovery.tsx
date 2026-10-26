@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Search, MapPin, Clock, DollarSign, Bookmark, ArrowRight, Sparkles, Filter } from 'lucide-react';
+import { Search, MapPin, Clock, DollarSign, Bookmark, ArrowRight, Sparkles, Filter, Briefcase } from 'lucide-react';
 import { useInterConnect } from '@/lib/context/InterConnectContext';
 
 export default function InternshipDiscovery() {
@@ -11,6 +11,10 @@ export default function InternshipDiscovery() {
   const [workTypeFilter, setWorkTypeFilter] = useState<string>('All');
 
   const filteredInternships = internships.filter((internship) => {
+    // Exclude expired or non-published opportunities
+    if (internship.isExpired) return false;
+    if (internship.status && internship.status !== 'published') return false;
+
     const matchesSearch =
       internship.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       internship.company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,7 +35,7 @@ export default function InternshipDiscovery() {
           <span className="text-xs uppercase tracking-widest font-extrabold text-brand-sky bg-brand-tint px-3 py-1 rounded-full border border-brand-sky/20">
             Marketplace Preview
           </span>
-          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy mt-2.5 mb-2 tracking-tight">
+          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy mt-2.5 mb-2 tracking-tight">
             Find Where You Belong.
           </h2>
           <p className="text-brand-muted text-sm sm:text-base">
@@ -74,15 +78,44 @@ export default function InternshipDiscovery() {
 
         {/* Internship Cards Grid */}
         {filteredInternships.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-brand-border p-6 max-w-xl mx-auto shadow-soft">
-            <p className="text-sm font-bold text-brand-navy mb-1">
-              {searchTerm ? 'No matching opportunities found' : 'No published internships yet'}
-            </p>
-            <p className="text-xs text-brand-muted">
+          <div className="text-center py-10 sm:py-12 bg-white rounded-3xl border border-dashed border-brand-border p-6 sm:p-8 max-w-xl mx-auto shadow-soft">
+            <div className="w-12 h-12 rounded-2xl bg-brand-tint border border-brand-sky/20 flex items-center justify-center text-brand-navy mx-auto mb-3.5">
+              <Briefcase className="w-6 h-6 text-brand-sky" />
+            </div>
+            <h3 className="text-base font-heading font-extrabold text-brand-navy mb-1.5">
+              {searchTerm ? 'No matching opportunities found' : 'No active internship cohorts right now'}
+            </h3>
+            <p className="text-xs text-brand-muted max-w-md mx-auto leading-relaxed mb-5">
               {searchTerm
-                ? 'Try adjusting your search criteria or clearing filters to see open roles.'
-                : 'Check back soon as verified employer partners publish new internship cohorts.'}
+                ? 'Try broadening your search term or clearing filters to discover other available roles.'
+                : 'InterConnect only displays verified, live positions with active application windows. In the meantime, explore verified Ethiopian employers or complete your student profile.'}
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              {searchTerm ? (
+                <button
+                  onClick={() => { setSearchTerm(''); setWorkTypeFilter('All'); }}
+                  className="px-5 py-2 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold transition-all shadow-subtle"
+                >
+                  Clear Search Filters
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href="/companies"
+                    className="px-5 py-2.5 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold transition-all shadow-subtle flex items-center gap-1.5"
+                  >
+                    <span>Browse Verified Companies</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-brand-sky" />
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="px-5 py-2.5 rounded-full bg-brand-canvas hover:bg-brand-border/40 text-brand-navy border border-brand-border text-xs font-bold transition-all"
+                  >
+                    Complete Student Profile
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -130,10 +163,10 @@ export default function InternshipDiscovery() {
                     </Link>
                   </div>
 
-                  {/* Match score bar */}
+                  {/* Department pill */}
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-tint text-brand-navy text-[11px] font-bold mb-3">
-                    <Sparkles className="w-3 h-3 text-brand-sky" />
-                    <span>{item.matchScore}% Match Score</span>
+                    <Briefcase className="w-3 h-3 text-brand-sky" />
+                    <span>{item.department || item.industry}</span>
                   </div>
 
                   {/* Metadata Chips */}
@@ -173,7 +206,11 @@ export default function InternshipDiscovery() {
                 {/* Card Action */}
                 <div className="pt-3 border-t border-brand-border/60 flex items-center justify-between">
                   <span className="text-[11px] font-medium text-brand-muted">
-                    Posted {item.postedDate}
+                    {item.postedDate && !item.postedDate.toLowerCase().includes('ago') && !isNaN(Date.parse(item.postedDate))
+                      ? `Posted ${new Date(item.postedDate).toLocaleDateString()}`
+                      : item.applicationDeadline
+                      ? `Deadline: ${item.applicationDeadline}`
+                      : 'Actively Open'}
                   </span>
                   <Link
                     href={`/internships/${item.id}`}

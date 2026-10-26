@@ -3,16 +3,9 @@
 import React from 'react';
 import Navbar from '@/components/layout/Navbar';
 import HeroSection from '@/components/landing/HeroSection';
-import TrustSection from '@/components/landing/TrustSection';
-import FeaturesSection from '@/components/landing/FeaturesSection';
-import HowItWorksSection from '@/components/landing/HowItWorksSection';
-import SmartMatchSection from '@/components/landing/SmartMatchSection';
-import ForStudentsSection from '@/components/landing/ForStudentsSection';
-import ForCompaniesSection from '@/components/landing/ForCompaniesSection';
 import InternshipDiscovery from '@/components/landing/InternshipDiscovery';
 import CompanyDiscovery from '@/components/landing/CompanyDiscovery';
-import TestimonialsSection from '@/components/landing/TestimonialsSection';
-import ImpactSection from '@/components/landing/ImpactSection';
+import SmartMatchSection from '@/components/landing/SmartMatchSection';
 import CTASection from '@/components/landing/CTASection';
 import Footer from '@/components/layout/Footer';
 
@@ -22,43 +15,22 @@ export default function HomePage() {
       {/* 1. Sticky Glass Navbar */}
       <Navbar />
 
-      {/* 2. Asymmetric Hero Section with Floating Cards & Connection Motifs */}
+      {/* 2. Hero Section */}
       <HeroSection />
 
-      {/* 3 & 4. Social Proof Company Logos & Animated Stats */}
-      <TrustSection />
-
-      {/* 5. Core Platform Features (Cakap Services Inspired Rhythm) */}
-      <FeaturesSection />
-
-      {/* 6. Interactive How It Works with Student / Company Toggle */}
-      <HowItWorksSection />
-
-      {/* 7. Smart Matching Simulator with Granular Compatibility Metrics */}
-      <SmartMatchSection />
-
-      {/* 8. For Students with Profile Studio Mockup & Checklist */}
-      <ForStudentsSection />
-
-      {/* 9. For Companies with ATS Pipeline Dashboard Preview */}
-      <ForCompaniesSection />
-
-      {/* 10. Internship Discovery Marketplace Live Preview */}
+      {/* 3. Live Internship Opportunities Marketplace */}
       <InternshipDiscovery />
 
-      {/* 11. Company Discovery Showcase */}
+      {/* 4. Verified Employers Directory Preview */}
       <CompanyDiscovery />
 
-      {/* 12. Success Stories Interactive Testimonial Slider */}
-      <TestimonialsSection />
+      {/* 5. Smart Matching Simulator */}
+      <SmartMatchSection />
 
-      {/* 13. Platform Impact Numbers Bar */}
-      <ImpactSection />
-
-      {/* 14. Curved Light-Blue Call To Action with Wave Transitions */}
+      {/* 6. Call To Action */}
       <CTASection />
 
-      {/* 15. Dark Navy Comprehensive Footer */}
+      {/* 7. Footer */}
       <Footer />
     </main>
   );

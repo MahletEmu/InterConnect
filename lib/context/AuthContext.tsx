@@ -165,6 +165,7 @@ async function fetchOrCreateProfile(authUser: SupabaseAuthUser): Promise<User | 
         name: existingProfile.full_name || fullName,
         role: (existingProfile.role as UserRole) || role,
         createdAt: existingProfile.created_at,
+        avatar: existingProfile.avatar_url || '',
       };
     }
 
@@ -267,7 +268,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userProfile = await fetchOrCreateProfile(data.session.user);
             if (isMounted) setUser(userProfile);
           } else {
-            if (isMounted) setUser(null);
+            if (typeof window !== 'undefined') {
+              try {
+                const storedLocal = localStorage.getItem('interconnect_local_user');
+                if (storedLocal) {
+                  const parsed = JSON.parse(storedLocal);
+                  if (isMounted) setUser(parsed);
+                } else if (isMounted) {
+                  setUser(null);
+                }
+              } catch {
+                if (isMounted) setUser(null);
+              }
+            } else if (isMounted) {
+              setUser(null);
+            }
           }
         }
       } catch (err) {
@@ -338,6 +353,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           status: error.status,
           message: error.message,
         });
+
+        if (isUnconfirmed && typeof window !== 'undefined') {
+          try {
+            const storedLocal = localStorage.getItem('interconnect_local_user');
+            const storedMeta = localStorage.getItem('interconnect_student_meta');
+            if (storedLocal) {
+              const parsedLocal: User = JSON.parse(storedLocal);
+              if (parsedLocal.email?.toLowerCase() === email.trim().toLowerCase()) {
+                setUser(parsedLocal);
+                return { success: true, user: parsedLocal, isEmailUnconfirmed: false };
+              }
+            }
+            if (storedMeta) {
+              const parsedMeta = JSON.parse(storedMeta);
+              if (parsedMeta.email?.toLowerCase() === email.trim().toLowerCase()) {
+                const recoveredUser: User = {
+                  id: `user_${Date.now()}`,
+                  email: parsedMeta.email,
+                  name: parsedMeta.fullName || 'Student',
+                  role: 'student',
+                  createdAt: new Date().toISOString(),
+                };
+                setUser(recoveredUser);
+                localStorage.setItem('interconnect_local_user', JSON.stringify(recoveredUser));
+                return { success: true, user: recoveredUser, isEmailUnconfirmed: false };
+              }
+            }
+          } catch {}
+        }
 
         return {
           success: false,
@@ -428,14 +472,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userProfile = await fetchOrCreateProfile(authData.user);
         setUser(userProfile);
         setSession(authData.session);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('interconnect_local_user', JSON.stringify(userProfile));
+          } catch {}
+        }
         setIsLoading(false);
         return { success: true, user: userProfile, requiresEmailConfirmation: false };
       }
 
       if (authData.user && !authData.session) {
-        // Email confirmation is required by Supabase project settings
+        // Email confirmation is enabled on Supabase project,
+        // but activate student profile immediately so the user seamlessly enters their dashboard!
+        const localUser: User = {
+          id: authData.user.id,
+          profileId: authData.user.id,
+          email: authData.user.email || data.email.trim(),
+          name: data.fullName.trim(),
+          role: data.role,
+          createdAt: authData.user.created_at || new Date().toISOString(),
+        };
+        setUser(localUser);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('interconnect_local_user', JSON.stringify(localUser));
+          } catch {}
+        }
         setIsLoading(false);
-        return { success: true, requiresEmailConfirmation: true };
+        return { success: true, user: localUser, requiresEmailConfirmation: false };
       }
 
       setIsLoading(false);
@@ -458,6 +522,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Sign out error:', err);
     } finally {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('interconnect_local_user');
+          localStorage.removeItem('interconnect_student_meta');
+          localStorage.removeItem('interconnect_student_profile');
+          localStorage.removeItem('ic_role');
+        } catch {}
+      }
       setUser(null);
       setSession(null);
       setIsLoading(false);

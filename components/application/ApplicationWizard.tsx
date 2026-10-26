@@ -37,6 +37,7 @@ export default function ApplicationWizard({ internship, onClose }: ApplicationWi
   const [submittedApp, setSubmittedApp] = useState<Application | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Form State
@@ -82,27 +83,85 @@ export default function ApplicationWizard({ internship, onClose }: ApplicationWi
   ];
 
   const handleNext = async () => {
-    if (step < 6) {
-      setStep(step + 1);
-    } else {
+    setSubmitError(null);
+
+    // Step 1 Validation
+    if (step === 1) {
+      if (!fullName.trim()) {
+        setSubmitError('Please provide your full legal or professional name.');
+        return;
+      }
+      if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+        setSubmitError('Please provide a valid email address so recruiters can contact you.');
+        return;
+      }
+      setStep(2);
+      return;
+    }
+
+    // Step 2 Validation
+    if (step === 2) {
+      if (!university.trim()) {
+        setSubmitError('Please specify your current or attended university/college.');
+        return;
+      }
+      if (!degree.trim()) {
+        setSubmitError('Please specify your degree or field of study.');
+        return;
+      }
+      setStep(3);
+      return;
+    }
+
+    // Step 3 Validation (Skills)
+    if (step === 3) {
+      setStep(4);
+      return;
+    }
+
+    // Step 4 Validation (Resume Document)
+    if (step === 4) {
+      if (!selectedFile && !currentUser?.resumeUrl && !resumeName.trim()) {
+        setSubmitError('Please attach a CV/resume document (PDF or DOCX, max 10MB) before proceeding.');
+        return;
+      }
+      setStep(5);
+      return;
+    }
+
+    // Step 5 Validation (Cover Note)
+    if (step === 5) {
+      setStep(6);
+      return;
+    }
+
+    // Step 6: Final Submission
+    if (step === 6) {
+      if (internship.isExpired) {
+        setSubmitError('This internship opportunity has closed and is no longer accepting submissions.');
+        return;
+      }
+      if (isSubmitting) return;
+
       setIsSubmitting(true);
       try {
         const app = await submitApplication(internship.id, {
-          fullName,
-          email,
-          phone,
-          university,
-          degree,
-          gradYear,
+          fullName: fullName.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          university: university.trim(),
+          degree: degree.trim(),
+          gradYear: gradYear.trim(),
           skills: selectedSkills,
-          resumeName,
-          coverLetter,
+          resumeName: selectedFile ? selectedFile.name : (resumeName || 'Resume_Attached.pdf'),
+          coverLetter: coverLetter.trim(),
           resumeFile: selectedFile || undefined,
         });
         setSubmittedApp(app);
         setStep(7); // Success step
-      } catch (err) {
+      } catch (err: any) {
         console.error('Application submission error:', err);
+        setSubmitError(err.message || 'Failed to submit application. Please check your network and try again.');
       } finally {
         setIsSubmitting(false);
       }
@@ -110,8 +169,35 @@ export default function ApplicationWizard({ internship, onClose }: ApplicationWi
   };
 
   const handleBack = () => {
+    setSubmitError(null);
     if (step > 1) setStep(step - 1);
   };
+
+  if (internship.isExpired) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="relative w-full max-w-md bg-white rounded-3xl shadow-float border border-brand-border p-7 text-center space-y-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-1">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h3 className="font-heading font-extrabold text-lg text-brand-navy">
+            Position Closed
+          </h3>
+          <p className="text-xs text-brand-muted leading-relaxed">
+            The application window for <strong>{internship.title}</strong> at {internship.company.name} closed on {internship.applicationDeadline || 'the deadline'}. This position cannot accept new candidate applications.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-full bg-brand-navy text-white text-xs font-bold hover:bg-brand-navyLight transition-colors"
+            >
+              Back to Internships
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -198,6 +284,13 @@ export default function ApplicationWizard({ internship, onClose }: ApplicationWi
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+          {submitError && (
+            <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           {step === 1 && (
             <div className="space-y-3.5">
               <h4 className="font-heading font-extrabold text-lg text-brand-navy">Personal Details</h4>
@@ -426,7 +519,21 @@ export default function ApplicationWizard({ internship, onClose }: ApplicationWi
                 Please double check all information before submitting to {internship.company.name}.
               </p>
 
+              {submitError && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                  {submitError}
+                </div>
+              )}
+
               <div className="p-4 rounded-2xl bg-brand-canvas border border-brand-border space-y-3 text-xs">
+                <div className="flex justify-between border-b border-brand-border/60 pb-2">
+                  <span className="text-brand-muted">Target Position:</span>
+                  <span className="font-bold text-brand-navy">{internship.title}</span>
+                </div>
+                <div className="flex justify-between border-b border-brand-border/60 pb-2">
+                  <span className="text-brand-muted">Organization:</span>
+                  <span className="font-bold text-brand-navy">{internship.company.name}</span>
+                </div>
                 <div className="flex justify-between border-b border-brand-border/60 pb-2">
                   <span className="text-brand-muted">Applicant:</span>
                   <span className="font-bold text-brand-navy">{fullName} ({email})</span>
@@ -435,13 +542,9 @@ export default function ApplicationWizard({ internship, onClose }: ApplicationWi
                   <span className="text-brand-muted">Education:</span>
                   <span className="font-bold text-brand-navy">{degree} · {university}</span>
                 </div>
-                <div className="flex justify-between border-b border-brand-border/60 pb-2">
-                  <span className="text-brand-muted">Resume:</span>
-                  <span className="font-bold text-brand-navy">{resumeName}</span>
-                </div>
                 <div className="flex justify-between">
-                  <span className="text-brand-muted">Match Score:</span>
-                  <span className="font-bold text-brand-sky">{internship.matchScore}% Match</span>
+                  <span className="text-brand-muted">Resume Document:</span>
+                  <span className="font-bold text-brand-navy">{resumeName || 'Profile CV'}</span>
                 </div>
               </div>
             </div>

@@ -118,6 +118,21 @@ export default function CompanyInternshipsPage() {
     }
   };
 
+  const companyPositions = internships.filter((intern) => {
+    // Exclude fake test internships
+    if (
+      intern.id === 'efcab36e-b7ed-424d-86fb-0d11a3406792' ||
+      intern.id === 'a64a4ddd-b6d2-48f2-85ef-da0bfd12ee2c' ||
+      intern.title.toLowerCase().includes('softmock') ||
+      intern.company?.name?.toLowerCase().includes('softnock')
+    ) {
+      return false;
+    }
+    if (companyProfileId && intern.companyId === companyProfileId) return true;
+    if (currentCompany?.name && intern.company?.name?.toLowerCase() === currentCompany.name.toLowerCase()) return true;
+    return false;
+  });
+
   return (
     <div className="min-h-screen bg-brand-canvas flex">
       <DashboardSidebar
@@ -154,7 +169,7 @@ export default function CompanyInternshipsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {internships.length === 0 ? (
+            {companyPositions.length === 0 ? (
               <div className="col-span-full bg-white p-8 sm:p-10 rounded-2xl sm:rounded-3xl border border-dashed border-brand-border text-center shadow-soft">
                 <div className="w-14 h-14 rounded-xl bg-brand-canvas border border-brand-border flex items-center justify-center text-brand-sky mx-auto mb-3">
                   <Briefcase className="w-7 h-7" />
@@ -178,7 +193,7 @@ export default function CompanyInternshipsPage() {
                 </button>
               </div>
             ) : (
-              internships.map((intern) => (
+              companyPositions.map((intern) => (
               <div
                 key={intern.id}
                 className="bg-white rounded-2xl p-5 border border-brand-border shadow-soft hover:shadow-card transition-all flex flex-col justify-between"

@@ -5,7 +5,7 @@ export const mockStudents: Student[] = [
     id: 'stud-1',
     name: 'Alex Morgan',
     email: 'alex.morgan@university.edu',
-    avatar: '/images/hero-student.jpg',
+    avatar: '',
     headline: 'Computer Science & Software Engineering Student · Aspiring Full-Stack & Systems Engineer',
     university: 'Addis Ababa Institute of Technology',
     degree: 'B.Sc. in Computer Science',

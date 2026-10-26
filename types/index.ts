@@ -90,14 +90,20 @@ export interface Company {
   logo: string;
   industry: string;
   location: string;
+  city?: string;
   website: string;
+  careersUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   size: string;
   about: string;
   mission: string;
   culture: string[];
   benefits: string[];
+  internshipFields?: string[];
   openPositionsCount: number;
   verified: boolean;
+  isClaimed?: boolean;
   coverImage?: string;
 }
 
@@ -118,6 +124,8 @@ export interface Internship {
   duration: string;
   stipend: string;
   postedDate: string;
+  applicationDeadline?: string;
+  isExpired?: boolean;
   matchScore: number;
   matchBreakdown: MatchBreakdown;
   matchReasons?: string[];
@@ -125,7 +133,7 @@ export interface Internship {
   responsibilities: string[];
   requirements: string[];
   requiredSkills: string[];
-  preferredSkills: string[];
+  preferredSkills?: string[];
   benefits: string[];
   department: string;
   industry: string;

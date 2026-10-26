@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ArrowRight, Sparkles, User, Building, Compass, LogOut } from 'lucide-react';
+import { Menu, X, ArrowRight, Sparkles, User, Building, Compass, LogOut, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useInterConnect } from '@/lib/context/InterConnectContext';
 
@@ -27,10 +27,9 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: 'For Students', href: '/students' },
-    { name: 'For Companies', href: '/companies' },
-    { name: 'Internships', href: '/internships' },
-    { name: 'How It Works', href: '/#how-it-works' },
+    { name: 'Home', href: '/' },
+    { name: 'Find Internships', href: '/internships' },
+    { name: 'Explore Companies', href: '/companies' },
     { name: 'About', href: '/about' },
   ];
 
@@ -69,7 +68,7 @@ export default function Navbar() {
                 Inter<span className="text-brand-sky">Connect</span>
               </span>
               <span className="text-[10px] uppercase tracking-widest text-brand-muted -mt-1 font-semibold">
-                Talent Marketplace
+                Ethiopia Internship Platform
               </span>
             </div>
           </Link>
@@ -99,11 +98,26 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href={user?.role === 'company' ? '/dashboard/company' : '/dashboard/student'}
+                  href={
+                    user?.role === 'admin'
+                      ? '/dashboard/admin'
+                      : user?.role === 'company'
+                      ? '/dashboard/company'
+                      : '/dashboard/student'
+                  }
                   className="text-xs font-bold px-4 py-2 rounded-full bg-brand-navy text-white hover:bg-brand-navyLight transition-all flex items-center gap-1.5 shadow-2xs"
                 >
-                  <Compass className="w-3.5 h-3.5 text-brand-sky" />
-                  <span>Go to Dashboard</span>
+                  {user?.role === 'admin' ? (
+                    <>
+                      <ShieldCheck className="w-3.5 h-3.5 text-brand-sky" />
+                      <span>Admin Portal</span>
+                    </>
+                  ) : (
+                    <>
+                      <Compass className="w-3.5 h-3.5 text-brand-sky" />
+                      <span>{user?.role === 'company' ? 'Company Dashboard' : 'Student Dashboard'}</span>
+                    </>
+                  )}
                 </Link>
                 <button
                   type="button"
@@ -118,17 +132,16 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm font-semibold text-brand-navy hover:text-brand-sky transition-colors px-3 py-2"
+                  className="inline-flex items-center justify-center text-sm font-bold text-brand-navy hover:text-brand-sky bg-white hover:bg-brand-tint/40 border border-brand-border hover:border-brand-sky/50 px-4 py-2 rounded-full shadow-2xs transition-all duration-200"
                 >
-                  Log In
+                  Log in
                 </Link>
 
                 <Link
                   href="/register"
-                  className="inline-flex items-center gap-2 text-sm font-bold text-white bg-gradient-to-r from-brand-sky to-brand-navy px-5 py-2.5 rounded-full shadow-subtle hover:shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                  className="inline-flex items-center justify-center text-sm font-bold text-white bg-gradient-to-r from-brand-sky to-brand-navy px-5 py-2 rounded-full shadow-subtle hover:shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                 >
                   <span>Get Started</span>
-                  <ArrowRight className="w-4 h-4" />
                 </Link>
               </>
             )}
@@ -139,14 +152,16 @@ export default function Navbar() {
             <Link
               href={
                 isAuthenticated
-                  ? user?.role === 'company'
+                  ? user?.role === 'admin'
+                    ? '/dashboard/admin'
+                    : user?.role === 'company'
                     ? '/dashboard/company'
                     : '/dashboard/student'
                   : '/login'
               }
-              className="text-xs font-medium px-2.5 py-1 rounded-full bg-brand-tint text-brand-navy"
+              className="text-xs font-bold px-3 py-1 rounded-full bg-brand-tint text-brand-navy"
             >
-              {isAuthenticated ? (user?.role === 'company' ? 'ATS' : 'Portal') : 'Log In'}
+              {isAuthenticated ? (user?.role === 'admin' ? 'Admin' : 'Dashboard') : 'Login'}
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -176,33 +191,20 @@ export default function Navbar() {
 
             <div className="h-px bg-brand-border/60 my-2" />
 
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <Link
-                href="/dashboard/student"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-brand-tint text-brand-navy text-xs font-bold"
-              >
-                <User className="w-4 h-4 text-brand-sky" />
-                Student Portal
-              </Link>
-              <Link
-                href="/dashboard/company"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-brand-navy text-white text-xs font-bold"
-              >
-                <Building className="w-4 h-4 text-brand-sky" />
-                Company ATS
-              </Link>
-            </div>
-
             {isAuthenticated ? (
               <div className="flex flex-col gap-2 pt-2">
                 <Link
-                  href={user?.role === 'company' ? '/dashboard/company' : '/dashboard/student'}
+                  href={
+                    user?.role === 'admin'
+                      ? '/dashboard/admin'
+                      : user?.role === 'company'
+                      ? '/dashboard/company'
+                      : '/dashboard/student'
+                  }
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center py-2.5 text-sm font-bold text-white bg-brand-navy rounded-full"
                 >
-                  Go to Dashboard
+                  {user?.role === 'admin' ? 'Admin Management Portal' : user?.role === 'company' ? 'Company Dashboard' : 'Go to Student Dashboard'}
                 </Link>
                 <button
                   type="button"
@@ -222,7 +224,7 @@ export default function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center py-2.5 text-sm font-bold text-brand-navy border border-brand-border rounded-full hover:bg-brand-tint/30 transition-colors"
                 >
-                  Log In
+                  Log in
                 </Link>
                 <Link
                   href="/register"

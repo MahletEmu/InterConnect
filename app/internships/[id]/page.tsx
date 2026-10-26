@@ -9,6 +9,7 @@ import ApplicationWizard from '@/components/application/ApplicationWizard';
 import { useInterConnect } from '@/lib/context/InterConnectContext';
 import { fetchInternshipById } from '@/lib/services/internshipService';
 import { mapDbInternshipToFrontend } from '@/lib/services/mapper';
+import { evaluateHonestMatch } from '@/lib/services/matchingService';
 import { Internship } from '@/types';
 import {
   MapPin,
@@ -25,12 +26,14 @@ import {
   Users,
   ChevronLeft,
   Loader2,
+  HelpCircle,
+  GraduationCap,
 } from 'lucide-react';
 
 export default function InternshipDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { internships, isSaved, toggleSaveInternship } = useInterConnect();
+  const { internships, isSaved, toggleSaveInternship, currentUser } = useInterConnect();
 
   const [showWizard, setShowWizard] = useState(false);
   const [dbInternship, setDbInternship] = useState<Internship | null>(null);
@@ -110,6 +113,7 @@ export default function InternshipDetailPage() {
   ).slice(0, 3);
 
   const saved = isSaved(internship.id);
+  const match = evaluateHonestMatch(currentUser, internship);
 
   return (
     <main className="min-h-screen flex flex-col bg-brand-canvas">
@@ -173,10 +177,22 @@ export default function InternshipDetailPage() {
 
             {/* Match Score & CTA Actions */}
             <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-2.5 shrink-0">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-tint border border-brand-sky/30 text-xs font-bold text-brand-navy shadow-subtle">
-                <Sparkles className="w-3.5 h-3.5 text-brand-sky" />
-                <span>{internship.matchScore}% Match for Your Profile</span>
-              </div>
+              {internship.isExpired ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 shadow-subtle">
+                  <Clock className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Applications Closed ({internship.applicationDeadline || 'Deadline passed'})</span>
+                </div>
+              ) : match.score !== null ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-tint border border-brand-sky/30 text-xs font-bold text-brand-navy shadow-subtle">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-sky" />
+                  <span>{match.score}% Fit · {match.label}</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-tint border border-brand-sky/30 text-xs font-bold text-brand-navy shadow-subtle">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-sky" />
+                  <span>Verified Opportunity · {internship.department}</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <button
@@ -191,13 +207,19 @@ export default function InternshipDetailPage() {
                   <Bookmark className={`w-4 h-4 ${saved ? 'fill-brand-sky' : ''}`} />
                 </button>
 
-                <button
-                  onClick={() => setShowWizard(true)}
-                  className="flex-1 sm:flex-initial px-6 sm:px-7 py-2.5 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white font-bold text-xs sm:text-sm shadow-card hover:shadow-glow transition-all flex items-center justify-center gap-2"
-                >
-                  <span>Apply Now</span>
-                  <ArrowRight className="w-4 h-4 text-brand-sky" />
-                </button>
+                {internship.isExpired ? (
+                  <span className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-zinc-200 text-zinc-600 font-bold text-xs sm:text-sm flex items-center justify-center cursor-not-allowed">
+                    Applications Closed
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setShowWizard(true)}
+                    className="flex-1 sm:flex-initial px-6 sm:px-7 py-2.5 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white font-bold text-xs sm:text-sm shadow-card hover:shadow-glow transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Apply Now</span>
+                    <ArrowRight className="w-4 h-4 text-brand-sky" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -213,43 +235,151 @@ export default function InternshipDetailPage() {
             {/* Left Content (Col 1-8) */}
             <div className="lg:col-span-8 space-y-5 sm:space-y-6">
 
-              {/* Match Breakdown Card */}
+              {/* Expired Notice Banner */}
+              {internship.isExpired && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3 shadow-xs">
+                  <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-heading font-extrabold text-sm text-amber-950">
+                      Application Deadline Passed
+                    </h4>
+                    <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                      The application window for this position closed on {internship.applicationDeadline || 'its scheduled deadline'}. This listing is retained for archival reference. You can explore other opportunities from{' '}
+                      <Link href={`/companies/${internship.company.id}`} className="font-bold underline hover:text-amber-950">
+                        {internship.company.name}
+                      </Link>{' '}
+                      or browse open positions in the directory.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Honest Profile Alignment Card */}
               <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-brand-tint/30 border border-brand-sky/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-brand-sky" />
-                  <h3 className="font-heading font-extrabold text-sm sm:text-base text-brand-navy">
-                    Why You Match This Role ({internship.matchScore}%)
-                  </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-sky" />
+                    <h3 className="font-heading font-extrabold text-sm sm:text-base text-brand-navy">
+                      {match.score !== null
+                        ? `Profile Alignment Analysis (${match.score}%)`
+                        : 'Profile Alignment Analysis'}
+                    </h3>
+                  </div>
+                  {match.score !== null && (
+                    <span className="inline-flex items-center text-xs font-bold px-2.5 py-0.5 rounded-full bg-white text-brand-navy border border-brand-sky/30">
+                      {match.label}
+                    </span>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3.5">
-                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-brand-border/60">
-                    <span className="text-[10px] text-brand-muted block font-semibold">Skills Match</span>
-                    <span className="font-black text-base sm:text-lg text-brand-navy">{internship.matchBreakdown.skills}%</span>
-                  </div>
-                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-brand-border/60">
-                    <span className="text-[10px] text-brand-muted block font-semibold">Education</span>
-                    <span className="font-black text-base sm:text-lg text-brand-navy">{internship.matchBreakdown.education}%</span>
-                  </div>
-                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-brand-border/60">
-                    <span className="text-[10px] text-brand-muted block font-semibold">Location Type</span>
-                    <span className="font-black text-base sm:text-lg text-brand-navy">{internship.matchBreakdown.location}%</span>
-                  </div>
-                  <div className="bg-white p-2.5 sm:p-3 rounded-xl border border-brand-border/60">
-                    <span className="text-[10px] text-brand-muted block font-semibold">Interests</span>
-                    <span className="font-black text-base sm:text-lg text-brand-navy">{internship.matchBreakdown.interests}%</span>
-                  </div>
-                </div>
+                {currentUser ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
+                      {/* Department / Field Criteria */}
+                      <div className="bg-white p-3 rounded-xl border border-brand-border/60">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Field of Study</span>
+                          {match.departmentMatch ? (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Matched</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">Different Field</span>
+                          )}
+                        </div>
+                        <p className="text-xs font-bold text-brand-navy truncate">
+                          {currentUser.fieldOfStudy || 'Not specified'}
+                        </p>
+                        <span className="text-[11px] text-brand-muted block mt-0.5">
+                          Target: {internship.department}
+                        </span>
+                      </div>
 
-                {internship.matchReasons && (
-                  <ul className="text-xs text-brand-text space-y-1">
-                    {internship.matchReasons.map((r, i) => (
-                      <li key={i} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-brand-sky shrink-0" />
-                        <span>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
+                      {/* Technical Skills Criteria */}
+                      <div className="bg-white p-3 rounded-xl border border-brand-border/60">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Skill Overlap</span>
+                          <span className="text-[10px] font-bold text-brand-navy bg-brand-tint px-1.5 py-0.5 rounded">
+                            {match.matchedSkills.length} of {internship.requiredSkills.length}
+                          </span>
+                        </div>
+                        <p className="text-xs font-bold text-brand-navy">
+                          {match.matchedSkills.length > 0
+                            ? `${match.matchedSkills.slice(0, 2).join(', ')}${match.matchedSkills.length > 2 ? ' +' + (match.matchedSkills.length - 2) : ''}`
+                            : 'No matching skills listed'}
+                        </p>
+                        <span className="text-[11px] text-brand-muted block mt-0.5">
+                          Based on declared skills
+                        </span>
+                      </div>
+
+                      {/* Location & Work Arrangement Criteria */}
+                      <div className="bg-white p-3 rounded-xl border border-brand-border/60">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-brand-muted uppercase font-bold tracking-wider">Work Arrangement</span>
+                          {match.locationMatch ? (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Accessible</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Check Location</span>
+                          )}
+                        </div>
+                        <p className="text-xs font-bold text-brand-navy truncate">
+                          {internship.type} · {internship.location}
+                        </p>
+                        <span className="text-[11px] text-brand-muted block mt-0.5">
+                          Your city: {currentUser.location || 'Not set'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Matched Reasons List */}
+                    {match.reasons.length > 0 && (
+                      <div className="mb-3 space-y-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-brand-navy block">
+                          Verified Match Factors:
+                        </span>
+                        <ul className="text-xs text-brand-text space-y-1">
+                          {match.reasons.map((r, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>{r}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Recommendations or Incomplete Fields */}
+                    {match.missingProfileFields.length > 0 && (
+                      <div className="mt-3 p-3 rounded-xl bg-white/80 border border-brand-border text-xs text-brand-muted">
+                        <span className="font-bold text-brand-navy block mb-1">Honest Advisory & Improvement Tips:</span>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          {match.missingProfileFields.map((rec: string, i: number) => (
+                            <li key={i}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Guest Student Callout */
+                  <div className="bg-white p-4 rounded-xl border border-brand-border">
+                    <p className="text-xs text-brand-muted leading-relaxed mb-3">
+                      InterConnect evaluates honest alignment based on your university field of study, declared skills, and location preferences—never using arbitrary AI scores or fake percentages.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/login?redirect=/internships/${internship.id}`}
+                        className="px-4 py-2 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold transition-all shadow-subtle"
+                      >
+                        Sign in as Student to Check Fit
+                      </Link>
+                      <Link
+                        href="/register"
+                        className="px-4 py-2 rounded-full bg-white hover:bg-brand-canvas text-brand-navy border border-brand-border text-xs font-bold transition-all"
+                      >
+                        Create Student Account
+                      </Link>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -320,7 +450,7 @@ export default function InternshipDetailPage() {
                     Preferred Skills (Nice to Have)
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {internship.preferredSkills.map((sk) => (
+                    {(internship.preferredSkills || []).map((sk) => (
                       <span
                         key={sk}
                         className="text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-canvas text-brand-muted border border-brand-border"
@@ -361,13 +491,28 @@ export default function InternshipDetailPage() {
                   Submitting directly notifies the hiring manager at {internship.company.name}.
                 </p>
 
-                <button
-                  onClick={() => setShowWizard(true)}
-                  className="w-full py-3 px-4 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white font-bold text-xs sm:text-sm shadow-card hover:shadow-glow transition-all flex items-center justify-center gap-2 mb-2.5"
-                >
-                  <span>Apply Now</span>
-                  <ArrowRight className="w-4 h-4 text-brand-sky" />
-                </button>
+                {internship.isExpired ? (
+                  <div className="space-y-2 mb-2.5">
+                    <div className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
+                      <span className="text-xs font-bold text-zinc-700 block">Position Closed</span>
+                      <span className="text-[11px] text-zinc-500">Applications are no longer accepted</span>
+                    </div>
+                    <button
+                      disabled
+                      className="w-full py-3 px-4 rounded-full bg-zinc-200 text-zinc-500 font-bold text-xs cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <span>Applications Closed</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowWizard(true)}
+                    className="w-full py-3 px-4 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white font-bold text-xs sm:text-sm shadow-card hover:shadow-glow transition-all flex items-center justify-center gap-2 mb-2.5"
+                  >
+                    <span>Apply Now</span>
+                    <ArrowRight className="w-4 h-4 text-brand-sky" />
+                  </button>
+                )}
 
                 <button
                   onClick={() => toggleSaveInternship(internship.id)}
@@ -443,8 +588,10 @@ export default function InternshipDetailPage() {
                     </h5>
                   </Link>
 
-                  <div className="text-xs font-bold text-brand-sky mb-3">
-                    {sim.matchScore}% Match
+                  <div className="flex items-center gap-1.5 text-xs text-brand-muted mb-3 truncate">
+                    <span className="font-semibold text-brand-navy">{sim.department}</span>
+                    <span>•</span>
+                    <span>{sim.location}</span>
                   </div>
 
                   <Link

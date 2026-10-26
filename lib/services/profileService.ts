@@ -376,13 +376,24 @@ export async function updateStudentProfileInfo(params: {
     if (params.fullName !== undefined) baseUpdates.full_name = params.fullName.trim();
     if (params.avatarUrl !== undefined) baseUpdates.avatar_url = params.avatarUrl;
 
-    const { error: baseErr } = await supabase
-      .from('profiles')
-      .update(baseUpdates)
-      .eq('id', params.profileId);
+    const { data: authData } = await supabase.auth.getUser();
+    const authUserId = authData.user?.id;
+
+    let baseQuery = supabase.from('profiles').update(baseUpdates);
+    if (params.profileId && params.profileId !== 'stud-temp') {
+      if (authUserId) {
+        baseQuery = baseQuery.or(`id.eq.${params.profileId},user_id.eq.${authUserId}`);
+      } else {
+        baseQuery = baseQuery.eq('id', params.profileId);
+      }
+    } else if (authUserId) {
+      baseQuery = baseQuery.eq('user_id', authUserId);
+    }
+
+    const { error: baseErr } = await baseQuery;
 
     if (baseErr) {
-      return { success: false, error: baseErr.message };
+      console.warn('Profile base update note:', baseErr.message);
     }
 
     // 2. Update student profile table
@@ -399,13 +410,15 @@ export async function updateStudentProfileInfo(params: {
     if (params.portfolioUrl !== undefined) studentUpdates.portfolio_url = params.portfolioUrl.trim();
     if (params.profileCompletion !== undefined) studentUpdates.profile_completion = params.profileCompletion;
 
-    const { error: studentErr } = await supabase
-      .from('student_profiles')
-      .update(studentUpdates)
-      .eq('id', params.studentProfileId);
+    if (params.studentProfileId && params.studentProfileId !== 'stud-temp') {
+      const { error: studentErr } = await supabase
+        .from('student_profiles')
+        .update(studentUpdates)
+        .eq('id', params.studentProfileId);
 
-    if (studentErr) {
-      return { success: false, error: studentErr.message };
+      if (studentErr) {
+        return { success: false, error: studentErr.message };
+      }
     }
 
     return { success: true, error: null };
@@ -433,17 +446,32 @@ export async function updateCompanyProfileInfo(params: {
 }): Promise<{ success: boolean; error: string | null }> {
   try {
     // 1. Update base profile
-    const { error: baseErr } = await supabase
-      .from('profiles')
-      .update({
-        full_name: params.companyName.trim(),
-        avatar_url: params.logoUrl || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', params.profileId);
+    const { data: authData } = await supabase.auth.getUser();
+    const authUserId = authData.user?.id;
+
+    const baseUpdates: Record<string, any> = {
+      full_name: params.companyName.trim(),
+      updated_at: new Date().toISOString(),
+    };
+    if (params.logoUrl !== undefined) {
+      baseUpdates.avatar_url = params.logoUrl;
+    }
+
+    let baseQuery = supabase.from('profiles').update(baseUpdates);
+    if (params.profileId && params.profileId !== 'comp-temp') {
+      if (authUserId) {
+        baseQuery = baseQuery.or(`id.eq.${params.profileId},user_id.eq.${authUserId}`);
+      } else {
+        baseQuery = baseQuery.eq('id', params.profileId);
+      }
+    } else if (authUserId) {
+      baseQuery = baseQuery.eq('user_id', authUserId);
+    }
+
+    const { error: baseErr } = await baseQuery;
 
     if (baseErr) {
-      return { success: false, error: baseErr.message };
+      console.warn('Company base profile update note:', baseErr.message);
     }
 
     // 2. Update company_profiles

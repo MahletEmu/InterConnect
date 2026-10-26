@@ -122,7 +122,7 @@ export default function ForStudentsSection() {
             <span className="text-xs uppercase tracking-widest font-extrabold text-brand-sky bg-brand-tint px-3 py-1 rounded-full border border-brand-sky/20 mb-3">
               Student Platform
             </span>
-            <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy leading-tight tracking-tight mb-3">
+            <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy leading-tight tracking-tight mb-3">
               Your First Opportunity Should Open Doors.
             </h2>
             <p className="text-brand-muted text-sm sm:text-base leading-relaxed mb-6">

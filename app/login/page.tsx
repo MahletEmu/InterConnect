@@ -86,11 +86,6 @@ export default function LoginPage() {
     }
   };
 
-  const handlePresetSelect = (role: 'student' | 'company') => {
-    setRoleSelection(role);
-    setErrorMessage(null);
-  };
-
   return (
     <div className="min-h-screen bg-brand-canvas flex flex-col justify-center py-8 sm:py-10 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Decorative Background Glow */}
@@ -113,43 +108,15 @@ export default function LoginPage() {
           </span>
         </Link>
         <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-brand-navy tracking-tight">
-          Welcome Back
+          Student Sign In
         </h2>
         <p className="mt-1 text-xs sm:text-sm text-brand-muted">
-          Access your personalized opportunities and recruiter pipeline
+          Access your student dashboard, saved internships, and application updates
         </p>
       </div>
 
       <div className="mt-5 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white py-6 px-5 sm:px-8 shadow-float rounded-3xl border border-brand-border">
-
-          {/* Role Segmented Switcher */}
-          <div className="flex p-1 rounded-2xl bg-brand-canvas border border-brand-border mb-4">
-            <button
-              type="button"
-              onClick={() => handlePresetSelect('student')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                roleSelection === 'student'
-                  ? 'bg-brand-navy text-white shadow-2xs'
-                  : 'text-brand-muted hover:text-brand-navy'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Student / Intern</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePresetSelect('company')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                roleSelection === 'company'
-                  ? 'bg-brand-navy text-white shadow-2xs'
-                  : 'text-brand-muted hover:text-brand-navy'
-              }`}
-            >
-              <Building className="w-3.5 h-3.5" />
-              <span>Company / Recruiter</span>
-            </button>
-          </div>
 
           {/* Error Message Display */}
           {errorMessage && (

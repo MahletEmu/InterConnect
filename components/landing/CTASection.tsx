@@ -41,40 +41,40 @@ export default function CTASection() {
             </div>
 
             {/* Main CTA Heading */}
-            <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy tracking-tight leading-[1.15] mb-3">
-              Your Next Opportunity Starts With a{' '}
+            <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy tracking-tight leading-[1.15] mb-3">
+              Your Future Career Starts With the Right{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-sky to-brand-navy">
                 Connection.
               </span>
             </h2>
 
             {/* Supporting Text */}
-            <p className="text-sm sm:text-base text-brand-text/80 leading-relaxed mb-6 max-w-2xl mx-auto font-normal">
-              Whether you&apos;re looking for your first career-defining internship or your next high-impact engineering intern, InterConnect helps you make the right connection.
+            <p className="text-sm sm:text-base text-slate-700 leading-relaxed mb-6 max-w-2xl mx-auto font-normal">
+              Join university students across Ethiopia discovering verified internships, transparent company expectations, and direct placement opportunities.
             </p>
 
-            {/* Dual Role Action Buttons */}
+            {/* Student-First Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
               <Link
                 href="/internships"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold text-white bg-brand-navy hover:bg-brand-navyLight shadow-card hover:shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
               >
                 <Briefcase className="w-4 h-4 text-brand-sky" />
-                <span>I&apos;m Looking for an Internship</span>
+                <span>Browse Open Internships</span>
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
 
               <Link
-                href="/register?role=company"
+                href="/companies"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold text-brand-navy bg-white hover:bg-white/90 border border-brand-sky/30 shadow-soft hover:shadow-card hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
               >
                 <Building2 className="w-4 h-4 text-brand-sky" />
-                <span>I&apos;m Hiring Interns</span>
+                <span>Explore Verified Companies</span>
               </Link>
             </div>
 
             <p className="text-[11px] font-semibold text-brand-muted mt-4">
-              No credit card required · Free for university students · Verified hiring network
+              100% Free for University Students · Verified Ethiopian Employers · Direct Applications
             </p>
           </div>
 

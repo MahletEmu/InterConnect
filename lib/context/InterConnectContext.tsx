@@ -16,6 +16,7 @@ import {
   fetchInternships as dbFetchInternships,
   fetchCompanyInternships as dbFetchCompanyInternships,
   createInternship as dbCreateInternship,
+  EXCLUDED_INTERNSHIP_IDS,
 } from '@/lib/services/internshipService';
 import {
   submitApplication as dbSubmitApplication,
@@ -37,6 +38,7 @@ import {
   mapDbInternshipToFrontend,
   mapDbApplicationToFrontend,
 } from '@/lib/services/mapper';
+import { VERIFIED_ETHIOPIAN_INTERNSHIPS } from '@/lib/data/internships';
 
 export interface CreateInternshipInput {
   title: string;
@@ -61,6 +63,13 @@ interface InterConnectContextType {
   switchRole: (role: 'student' | 'company' | 'guest') => void;
   updateCurrentUser: (updates: Partial<Student> | ((prev: Student | null) => Student | null)) => void;
   updateCurrentCompany: (updates: Partial<Company> | ((prev: Company | null) => Company | null)) => void;
+  setRegisteredStudent: (data: {
+    fullName: string;
+    email: string;
+    university: string;
+    fieldOfStudy: string;
+    graduationYear: string;
+  }) => void;
 
   // Internships & Saved
   internships: Internship[];
@@ -90,6 +99,7 @@ interface InterConnectContextType {
     applicationId: string,
     newStatus: Application['status']
   ) => Promise<void>;
+  recordEmailApplication: (company: Company, subject: string, notes?: string) => Promise<void>;
 
   // Messaging
   conversations: Conversation[];
@@ -119,7 +129,7 @@ interface InterConnectContextType {
 const InterConnectContext = createContext<InterConnectContextType | undefined>(undefined);
 
 export function InterConnectProvider({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, session } = useAuth();
 
   const [role, setRole] = useState<'student' | 'company' | 'guest'>('student');
   const [currentUser, setCurrentUser] = useState<Student | null>(null);
@@ -150,57 +160,117 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch all published internships from Supabase
+      // 1. Fetch published internships from Supabase and merge with verified Ethiopian catalog
       const { data: dbInternships, error: internErr } = await dbFetchInternships();
-      if (!internErr && dbInternships) {
-        const mapped = dbInternships.map(mapDbInternshipToFrontend);
-        setInternships(mapped);
-      } else {
-        setInternships([]);
-      }
+      const mappedDb = !internErr && dbInternships
+        ? dbInternships
+            .map(mapDbInternshipToFrontend)
+            .filter(
+              (i) =>
+                !EXCLUDED_INTERNSHIP_IDS.includes(i.id) &&
+                !i.title.toLowerCase().includes('softmock') &&
+                !i.company?.name?.toLowerCase().includes('softnock')
+            )
+        : [];
+
+      // Combine Supabase positions with curated verified Ethiopian positions
+      const dbIds = new Set(mappedDb.map((i) => i.id));
+      const combined = [
+        ...mappedDb,
+        ...VERIFIED_ETHIOPIAN_INTERNSHIPS.filter(
+          (i) =>
+            !dbIds.has(i.id) &&
+            !EXCLUDED_INTERNSHIP_IDS.includes(i.id) &&
+            !i.title.toLowerCase().includes('softmock') &&
+            !i.company?.name?.toLowerCase().includes('softnock')
+        ),
+      ];
+      setInternships(combined);
 
       // 2. If authenticated user is a student, fetch student profile, applications, and saved internships
       if (user && user.role === 'student') {
+        const meta = session?.user?.user_metadata || {};
+        let localMeta: any = {};
+        if (typeof window !== 'undefined') {
+          try {
+            localMeta = JSON.parse(localStorage.getItem('interconnect_student_meta') || '{}');
+          } catch {}
+        }
         const { data: studentProf } = await getStudentProfileByUserId(user.id);
-        if (studentProf) {
-          setStudentProfileId(studentProf.studentProfileId);
-          setCurrentUser((prev) => ({
-            id: studentProf.studentProfileId,
-            profileId: studentProf.profileId,
-            userId: studentProf.userId,
-            name: studentProf.fullName || user.name,
-            email: studentProf.email || user.email,
-            avatar: studentProf.avatarUrl || prev?.avatar || '/images/hero-student.jpg',
-            headline: studentProf.fieldOfStudy ? `${studentProf.fieldOfStudy} Student` : '',
-            university: studentProf.university || '',
+        const effectiveField =
+          studentProf?.fieldOfStudy ||
+          meta.field_of_study ||
+          meta.field ||
+          localMeta.fieldOfStudy ||
+          'Software Engineering';
+        const effectiveUni =
+          studentProf?.university ||
+          meta.university ||
+          localMeta.university ||
+          'Addis Ababa University';
+        const effectiveGradYear =
+          parseInt(studentProf?.graduationYear || meta.graduation_year || meta.graduationYear || localMeta.graduationYear, 10) || 2027;
+
+        let localAvatar = '';
+        if (typeof window !== 'undefined') {
+          try {
+            localAvatar = localStorage.getItem('interconnect_student_avatar') || '';
+          } catch {}
+        }
+        setStudentProfileId(studentProf?.studentProfileId || user.id);
+        setCurrentUser((prev) => {
+          const effectiveAvatar =
+            studentProf?.avatarUrl && !studentProf.avatarUrl.includes('hero-student')
+              ? studentProf.avatarUrl
+              : user.avatar && !user.avatar.includes('hero-student')
+              ? user.avatar
+              : prev?.avatar && !prev.avatar.includes('hero-student')
+              ? prev.avatar
+              : localAvatar && !localAvatar.includes('hero-student')
+              ? localAvatar
+              : '';
+
+          return {
+            id: studentProf?.studentProfileId || user.id,
+            profileId: studentProf?.profileId || user.profileId,
+            userId: user.id,
+            name: studentProf?.fullName || meta.full_name || localMeta.fullName || user.name,
+            email: studentProf?.email || user.email,
+            avatar: effectiveAvatar,
+            headline: `${effectiveField} Student`,
+            university: effectiveUni,
             degree: prev?.degree || 'B.Sc.',
-            fieldOfStudy: studentProf.fieldOfStudy || '',
-            gradYear: parseInt(studentProf.graduationYear, 10) || 2026,
-            location: studentProf.location || '',
-            bio: studentProf.bio || '',
-            completionRate: studentProf.profileCompletion || 75,
-            skills: studentProf.skills?.map((s) => ({ name: s.skills?.name || 'Skill' })) || prev?.skills || [],
+            fieldOfStudy: effectiveField,
+            gradYear: effectiveGradYear,
+            location: studentProf?.location || meta.location || 'Ethiopia',
+            bio: studentProf?.bio || '',
+            completionRate: studentProf?.profileCompletion || 85,
+            skills: studentProf?.skills?.map((s) => ({ name: s.skills?.name || 'Skill' })) || prev?.skills || [
+              { name: effectiveField },
+            ],
             education: prev?.education || [],
-            projects: studentProf.projects?.map((p) => ({
+            projects: studentProf?.projects?.map((p) => ({
               id: p.id,
               title: p.title,
               description: p.description || '',
               technologies: p.technologies || [],
               link: p.project_url,
               github: p.github_url,
-            })) || [],
-            certificates: studentProf.certificates?.map((c) => ({
+            })) || prev?.projects || [],
+            certificates: studentProf?.certificates?.map((c) => ({
               id: c.id,
               title: c.name,
               issuer: c.issuer || '',
               issueDate: c.issue_date || '',
               credentialUrl: c.credential_url,
-            })) || [],
+            })) || prev?.certificates || [],
             experience: prev?.experience || [],
-            resumeUrl: studentProf.resumeUrl,
-            phone: studentProf.phone || '',
-          }));
+            resumeUrl: studentProf?.resumeUrl || prev?.resumeUrl,
+            phone: studentProf?.phone || meta.phone || prev?.phone || '',
+          };
+        });
 
+        if (studentProf) {
           // Fetch student's real saved internships from Supabase
           const { data: savedDb } = await dbFetchSavedInternships(studentProf.studentProfileId);
           if (savedDb) {
@@ -215,6 +285,15 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
             setApplications(mappedApps);
           }
         }
+      } else if (!user && typeof window !== 'undefined') {
+        // Fallback: restore student from local persistence if registered
+        try {
+          const cachedProfile = localStorage.getItem('interconnect_student_profile');
+          if (cachedProfile) {
+            const parsed = JSON.parse(cachedProfile);
+            setCurrentUser(parsed);
+          }
+        } catch {}
       }
 
       // 3. If authenticated user is a company, fetch company profile, posted internships, and applications
@@ -227,7 +306,7 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
             profileId: companyProf.profileId,
             userId: companyProf.userId,
             name: companyProf.companyName || user.name,
-            logo: companyProf.logoUrl || prev?.logo || (companyProf.companyName ? companyProf.companyName.slice(0, 2).toUpperCase() : 'CO'),
+            logo: companyProf.logoUrl || user.avatar || prev?.logo || (companyProf.companyName ? companyProf.companyName.slice(0, 2).toUpperCase() : 'CO'),
             industry: companyProf.industry || '',
             location: companyProf.location || '',
             website: companyProf.website || '',
@@ -243,8 +322,18 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
           // Fetch company's real internships from Supabase
           const { data: compInternsDb } = await dbFetchCompanyInternships(companyProf.companyProfileId);
           if (compInternsDb) {
-            const mappedCompanyInternships = compInternsDb.map(mapDbInternshipToFrontend);
-            setInternships(mappedCompanyInternships);
+            const mappedCompanyInternships = compInternsDb
+              .map(mapDbInternshipToFrontend)
+              .filter(
+                (c) =>
+                  !EXCLUDED_INTERNSHIP_IDS.includes(c.id) &&
+                  !c.title.toLowerCase().includes('softmock')
+              );
+            setInternships((prev) => {
+              const compIds = new Set(mappedCompanyInternships.map((c) => c.id));
+              const others = prev.filter((p) => !compIds.has(p.id));
+              return [...mappedCompanyInternships, ...others];
+            });
           }
 
           // Fetch company's real applications from Supabase
@@ -275,10 +364,16 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
 
   const updateCurrentUser = useCallback((updates: Partial<Student> | ((prev: Student | null) => Student | null)) => {
     setCurrentUser((prev) => {
-      if (typeof updates === 'function') {
-        return updates(prev);
+      const next = typeof updates === 'function' ? updates(prev) : (prev ? { ...prev, ...updates } : null);
+      if (typeof window !== 'undefined' && next) {
+        try {
+          if (next.avatar !== undefined) {
+            localStorage.setItem('interconnect_student_avatar', next.avatar || '');
+          }
+          localStorage.setItem('interconnect_student_profile', JSON.stringify(next));
+        } catch {}
       }
-      return prev ? { ...prev, ...updates } : null;
+      return next;
     });
   }, []);
 
@@ -291,11 +386,62 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
+  const setRegisteredStudent = useCallback((data: {
+    fullName: string;
+    email: string;
+    university: string;
+    fieldOfStudy: string;
+    graduationYear: string;
+  }) => {
+    const studentObj: Student = {
+      id: `student_${Date.now()}`,
+      profileId: `profile_${Date.now()}`,
+      userId: `user_${Date.now()}`,
+      name: data.fullName,
+      email: data.email,
+      avatar: '',
+      headline: `${data.fieldOfStudy} Student`,
+      university: data.university,
+      degree: 'B.Sc.',
+      fieldOfStudy: data.fieldOfStudy,
+      gradYear: parseInt(data.graduationYear, 10) || 2027,
+      location: 'Ethiopia',
+      bio: `Aspiring ${data.fieldOfStudy} student at ${data.university}.`,
+      completionRate: 85,
+      skills: [{ name: data.fieldOfStudy }],
+      education: [
+        {
+          id: 'edu_1',
+          institution: data.university,
+          degree: 'Bachelor of Science',
+          field: data.fieldOfStudy,
+          startDate: '2023',
+          endDate: data.graduationYear || '2027',
+        },
+      ],
+      projects: [],
+      certificates: [],
+      experience: [],
+      phone: '',
+    };
+    setCurrentUser(studentObj);
+    setRole('student');
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('interconnect_student_profile', JSON.stringify(studentObj));
+        localStorage.setItem('interconnect_student_meta', JSON.stringify(data));
+        localStorage.setItem('ic_role', 'student');
+      } catch {}
+    }
+  }, []);
+
   /**
    * Real Supabase Toggle Save / Bookmark
+   * Uses safe optimistic updates with rollback if Supabase operation fails.
    */
   const toggleSaveInternship = async (id: string) => {
     const isCurrentlySaved = savedInternshipIds.includes(id);
+    const previous = savedInternshipIds;
 
     // Optimistic state update
     const updated = isCurrentlySaved
@@ -307,12 +453,21 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
     if (studentProfileId) {
       try {
         if (isCurrentlySaved) {
-          await dbUnsaveInternship(studentProfileId, id);
+          const { success, error } = await dbUnsaveInternship(studentProfileId, id);
+          if (error || !success) {
+            console.error('Failed to unsave internship from Supabase:', error);
+            setSavedInternshipIds(previous); // Rollback
+          }
         } else {
-          await dbSaveInternship(studentProfileId, id);
+          const { data, error } = await dbSaveInternship(studentProfileId, id);
+          if (error || !data) {
+            console.error('Failed to save internship to Supabase:', error);
+            setSavedInternshipIds(previous); // Rollback
+          }
         }
       } catch (err) {
         console.error('Failed to sync saved internship with Supabase:', err);
+        setSavedInternshipIds(previous); // Rollback
       }
     }
   };
@@ -360,6 +515,11 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
 
   /**
    * Real Supabase Submit Application (Student action)
+   * Guaranteed:
+   * - Internship must exist and NOT be expired.
+   * - Student must be authenticated.
+   * - Resume file uploaded securely to private bucket.
+   * - Real database insert into `applications` and `application_status_history`.
    */
   const submitApplication = async (
     internshipId: string,
@@ -380,6 +540,11 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
     if (!targetInternship) {
       throw new Error('Internship opportunity not found.');
     }
+
+    if (targetInternship.isExpired) {
+      throw new Error('This position has closed and cannot accept new applications.');
+    }
+
     const effectiveStudentProfileId =
       studentProfileId || currentUser?.id;
 
@@ -387,133 +552,49 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
       throw new Error('Please sign in as a student to submit an application.');
     }
 
-    let resumeUrl = data.resumeName || 'Resume_Attached.pdf';
+    let resumeUrl = data.resumeName || currentUser?.resumeUrl || 'Resume_Attached.pdf';
 
     // Real resume file upload to private Supabase Storage bucket
     if (data.resumeFile && effectiveStudentProfileId) {
-      try {
-        const uploadResult = await uploadResume(effectiveStudentProfileId, data.resumeFile);
-        if (uploadResult.signedUrl) {
-          resumeUrl = uploadResult.signedUrl;
-        } else if (uploadResult.path) {
-          resumeUrl = uploadResult.path;
-        }
-      } catch (uploadErr) {
-        console.warn('Resume file upload note:', uploadErr);
+      const uploadResult = await uploadResume(effectiveStudentProfileId, data.resumeFile);
+      if (uploadResult.error) {
+        throw new Error(uploadResult.error || 'Failed to securely upload your resume file.');
+      }
+      if (uploadResult.signedUrl) {
+        resumeUrl = uploadResult.signedUrl;
+      } else if (uploadResult.path) {
+        resumeUrl = uploadResult.path;
       }
     }
 
     let createdApplication: Application;
 
-    try {
-      // Real insert into Supabase `applications` and `application_status_history`
-      const { data: dbApp, error: appErr } = await dbSubmitApplication({
-        student_profile_id: effectiveStudentProfileId,
-        internship_id: internshipId,
-        resume_url: resumeUrl,
-        cover_letter: data.coverLetter,
-      });
+    // Real insert into Supabase `applications` and `application_status_history`
+    const { data: dbApp, error: appErr } = await dbSubmitApplication({
+      student_profile_id: effectiveStudentProfileId,
+      internship_id: internshipId,
+      resume_url: resumeUrl,
+      cover_letter: data.coverLetter,
+    });
 
-      if (dbApp && !appErr) {
-        createdApplication = mapDbApplicationToFrontend(
-          {
-            ...dbApp,
-            internships: targetInternship,
-            student_profiles: {
-              id: effectiveStudentProfileId,
-              university: data.university,
-              field_of_study: data.degree,
-              profiles: { full_name: data.fullName, email: data.email },
-            },
-          },
-          targetInternship,
-          currentUser || undefined
-        );
-      } else {
-        // Fallback local Application structure if error or mock mode
-        createdApplication = {
-          id: `app-${Date.now().toString().slice(-4)}`,
-          internshipId,
-          studentId: effectiveStudentProfileId,
-          internship: targetInternship,
-          student: {
-            ...currentUser!,
-            name: data.fullName,
-            email: data.email,
-            phone: data.phone,
-            university: data.university,
-            degree: data.degree,
-          },
-          submittedAt: 'Today',
-          status: 'Submitted',
-          currentStep: 1,
-          resumeName: data.resumeName || 'Resume_Attached.pdf',
-          coverLetter: data.coverLetter,
-          timeline: [
-            {
-              status: 'Application Submitted',
-              date: 'Today',
-              note: `Successfully transmitted to ${targetInternship.company.name} recruitment portal.`,
-              completed: true,
-              current: true,
-            },
-            {
-              status: 'Application Review',
-              date: 'Pending',
-              note: 'Under evaluation by hiring team.',
-              completed: false,
-            },
-            {
-              status: 'Shortlist Decision',
-              date: 'Pending',
-              note: 'Awaiting review decision.',
-              completed: false,
-            },
-          ],
-        };
-      }
-    } catch {
-      // Local fallback in case of network issue
-      createdApplication = {
-        id: `app-${Date.now().toString().slice(-4)}`,
-        internshipId,
-        studentId: effectiveStudentProfileId,
-        internship: targetInternship,
-        student: currentUser || {
-          id: effectiveStudentProfileId,
-          name: data.fullName,
-          email: data.email,
-          avatar: '/images/hero-student.jpg',
-          headline: 'Student Applicant',
-          university: data.university,
-          degree: data.degree || 'B.Sc.',
-          fieldOfStudy: data.degree || 'Computer Science',
-          gradYear: parseInt(data.gradYear, 10) || 2026,
-          location: 'Remote',
-          bio: '',
-          completionRate: 85,
-          skills: data.skills.map((s) => ({ name: s })),
-          education: [],
-          projects: [],
-          certificates: [],
-          experience: [],
-        },
-        submittedAt: 'Today',
-        status: 'Submitted',
-        currentStep: 1,
-        resumeName: data.resumeName || 'Resume_Attached.pdf',
-        coverLetter: data.coverLetter,
-        timeline: [
-          {
-            status: 'Application Submitted',
-            date: 'Today',
-            note: `Successfully transmitted to ${targetInternship.company.name} recruitment portal.`,
-            completed: true,
-            current: true,
-          },
-        ],
-      };
+    if (appErr || !dbApp) {
+      throw new Error(appErr?.message || 'Failed to submit application to database. Please try again.');
     }
+
+    createdApplication = mapDbApplicationToFrontend(
+      {
+        ...dbApp,
+        internships: targetInternship,
+        student_profiles: {
+          id: effectiveStudentProfileId,
+          university: data.university,
+          field_of_study: data.degree,
+          profiles: { full_name: data.fullName, email: data.email },
+        },
+      },
+      targetInternship,
+      currentUser || undefined
+    );
 
     setApplications((prev) => [createdApplication, ...prev]);
 
@@ -607,6 +688,101 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
     );
   };
 
+  /**
+   * Direct Email Application Inquiry
+   * Allows students to record a direct email outreach to a verified Ethiopian company
+   * and tracks it in the student's active application timeline.
+   */
+  const recordEmailApplication = useCallback(
+    async (company: Company, subject: string, notes?: string) => {
+      const studentName = currentUser?.name || user?.name || 'Student';
+      const studentField = currentUser?.fieldOfStudy || 'University Candidate';
+      const studentUni = currentUser?.university || 'Ethiopian University';
+
+      const studentGradYear = currentUser?.gradYear || 2027;
+
+      const fallbackStudent: Student = {
+        id: currentUser?.id || 'student',
+        name: studentName,
+        email: user?.email || '',
+        avatar: currentUser?.avatar || '',
+        headline: `${studentField} Student`,
+        university: studentUni,
+        degree: 'B.Sc.',
+        fieldOfStudy: studentField,
+        gradYear: studentGradYear,
+        location: 'Ethiopia',
+        bio: '',
+        completionRate: 85,
+        skills: [],
+        education: [],
+        projects: [],
+        certificates: [],
+        experience: [],
+      };
+
+      const fallbackInternship: Internship = {
+        id: company.id,
+        companyId: company.id,
+        company: company,
+        title: `Direct Internship Inquiry (${studentField})`,
+        type: 'On-site',
+        location: company.location,
+        duration: 'Academic Attachment',
+        stipend: 'Direct Inquiry',
+        postedDate: new Date().toISOString(),
+        matchScore: 95,
+        matchBreakdown: { skills: 95, education: 95, location: 95, interests: 95 },
+        description: `Direct student internship inquiry sent via email to ${company.contactEmail}.`,
+        requirements: ['Enrolled university student', studentField],
+        responsibilities: ['Academic practical internship training'],
+        requiredSkills: currentUser?.skills?.map((s) => s.name) || [studentField],
+        preferredSkills: [],
+        benefits: company.benefits || [],
+        department: studentField,
+        industry: company.industry,
+        applicantsCount: 1,
+        status: 'published',
+      };
+
+      const newApp: Application = {
+        id: `email-app-${Date.now()}`,
+        internshipId: company.id,
+        studentId: currentUser?.id || 'student',
+        internship: fallbackInternship,
+        student: currentUser || fallbackStudent,
+        submittedAt: 'Today',
+        status: 'Submitted',
+        currentStep: 1,
+        timeline: [
+          {
+            status: 'Submitted',
+            date: 'Today',
+            completed: true,
+            note: `Direct internship inquiry dispatched to ${company.contactEmail}`,
+          },
+        ],
+        resumeName: 'Direct Email Inquiry',
+        coverLetter: notes || subject,
+      };
+
+      setApplications((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)]);
+
+      // Add student notification
+      const newNotif: NotificationItem = {
+        id: `notif-${Date.now()}`,
+        title: 'Email Inquiry Recorded! 📧',
+        message: `Your direct internship outreach to ${company.name} (${company.contactEmail}) has been logged in your tracker.`,
+        type: 'status',
+        timestamp: 'Just now',
+        isRead: false,
+        link: '/dashboard/student/applications',
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    },
+    [currentUser, user]
+  );
+
   const sendMessage = (conversationId: string, text: string) => {
     if (!text.trim()) return;
 
@@ -693,6 +869,7 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
         switchRole,
         updateCurrentUser,
         updateCurrentCompany,
+        setRegisteredStudent,
         internships,
         savedInternshipIds,
         toggleSaveInternship,
@@ -701,6 +878,7 @@ export function InterConnectProvider({ children }: { children: React.ReactNode }
         applications,
         submitApplication,
         updateApplicationStatus,
+        recordEmailApplication,
         conversations,
         messages,
         activeConversationId,

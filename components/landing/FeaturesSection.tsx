@@ -2,14 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Compass, UserCheck, Users, Sparkles, ArrowRight } from 'lucide-react';
+import { Compass, UserCheck, Building2, Sparkles, ArrowRight } from 'lucide-react';
 
 export default function FeaturesSection() {
   const features = [
     {
       title: 'Discover Internships',
       description:
-        'Find internships matched directly to your skills, interests, education, and long-term career aspirations without navigating clutter.',
+        'Find internships matched directly to your skills, university field, interests, and long-term career aspirations across Ethiopia.',
       icon: Compass,
       tag: 'For Students',
       highlighted: true,
@@ -18,25 +18,25 @@ export default function FeaturesSection() {
     {
       title: 'Build Your Profile',
       description:
-        'Show companies who you really are through verified skills, live capstone projects, education credentials, certificates, and code repositories.',
+        'Show companies who you really are through verified skills, live capstone projects, university credentials, certificates, and code repositories.',
       icon: UserCheck,
       tag: 'Portfolio Studio',
       highlighted: false,
       href: '/dashboard/student/profile',
     },
     {
-      title: 'Discover Talent',
+      title: 'Explore Companies',
       description:
-        'For high-growth companies: discover motivated students with the verified technical skills and problem-solving abilities your team needs today.',
-      icon: Users,
-      tag: 'For Recruiters',
+        'Research legitimate Ethiopian employers, tech enterprises, financial institutions, and innovative startups offering verified student internships.',
+      icon: Building2,
+      tag: 'Company Directory',
       highlighted: false,
       href: '/companies',
     },
     {
       title: 'Smart Matching',
       description:
-        'Get intelligent internship recommendations with granular compatibility breakdown across skills, location, availability, and team culture.',
+        'Get intelligent internship recommendations with transparent compatibility breakdown across your department, skills, and location.',
       icon: Sparkles,
       tag: 'Matching Engine',
       highlighted: false,
@@ -57,11 +57,11 @@ export default function FeaturesSection() {
           <span className="text-xs uppercase tracking-widest font-extrabold text-brand-sky bg-brand-tint px-3 py-1 rounded-full border border-brand-sky/20">
             Platform Capabilities
           </span>
-          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy mt-2.5 mb-2.5 tracking-tight">
+          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy mt-2.5 mb-2.5 tracking-tight">
             Everything You Need to Make the Right Connection
           </h2>
           <p className="text-brand-muted text-sm sm:text-base max-w-xl mx-auto">
-            Purpose-built tools for ambitious students to launch high-impact careers and for companies to secure top early-career talent.
+            Purpose-built tools for Ethiopian university students to launch high-impact careers and connect with verified employers.
           </p>
         </div>
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, MapPin, Briefcase, ShieldCheck, Building } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { fetchDirectoryCompanies } from '@/lib/services/companyService';
 import { Company } from '@/types';
 
 export default function CompanyDiscovery() {
@@ -12,30 +12,11 @@ export default function CompanyDiscovery() {
 
   useEffect(() => {
     let isMounted = true;
-    async function fetchCompanies() {
+    async function loadFeaturedCompanies() {
       try {
-        const { data } = await supabase
-          .from('company_profiles')
-          .select('id, company_name, logo_url, industry, location, description, website')
-          .limit(6);
-
-        if (data && isMounted) {
-          const mapped: Company[] = data.map((cp: any) => ({
-            id: cp.id,
-            name: cp.company_name,
-            logo: cp.logo_url || cp.company_name.slice(0, 2).toUpperCase(),
-            industry: cp.industry || 'Technology',
-            location: cp.location || 'Addis Ababa, Ethiopia',
-            website: cp.website || '',
-            size: cp.company_size || '10-50 employees',
-            about: cp.description || 'Verified hiring partner offering mentorship-driven student internships.',
-            mission: cp.mission || 'Fostering the next generation of engineers.',
-            culture: ['Innovation', 'Collaboration', 'Impact'],
-            benefits: ['Mentorship', 'Competitive Stipend'],
-            openPositionsCount: 1,
-            verified: true,
-          }));
-          setCompanies(mapped);
+        const res = await fetchDirectoryCompanies();
+        if (res && isMounted) {
+          setCompanies(res.companies.slice(0, 6));
         }
       } catch (err) {
         console.error('Error fetching companies for discovery:', err);
@@ -43,7 +24,7 @@ export default function CompanyDiscovery() {
         if (isMounted) setIsLoading(false);
       }
     }
-    fetchCompanies();
+    loadFeaturedCompanies();
     return () => {
       isMounted = false;
     };
@@ -58,7 +39,7 @@ export default function CompanyDiscovery() {
           <span className="text-xs uppercase tracking-widest font-extrabold text-brand-sky bg-brand-tint px-3 py-1 rounded-full border border-brand-sky/20">
             Featured Employers
           </span>
-          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-brand-navy mt-2.5 mb-2 tracking-tight">
+          <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-brand-navy mt-2.5 mb-2 tracking-tight">
             Don&apos;t Just Find an Internship.{' '}
             <span className="text-brand-sky">Find Your Company.</span>
           </h2>
@@ -78,10 +59,10 @@ export default function CompanyDiscovery() {
               Be among the forward-thinking companies connecting directly with university talent cohorts.
             </p>
             <Link
-              href="/register?role=company"
+              href="/internships"
               className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold transition-all shadow-subtle"
             >
-              <span>Register Your Organization</span>
+              <span>Browse Active Internships</span>
               <ArrowRight className="w-3.5 h-3.5 text-brand-sky" />
             </Link>
           </div>
@@ -98,10 +79,16 @@ export default function CompanyDiscovery() {
                     <div className="w-12 h-12 rounded-2xl bg-white group-hover:bg-brand-tint border border-brand-border flex items-center justify-center text-brand-navy font-black text-xl shadow-2xs transition-colors">
                       {comp.logo}
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      <ShieldCheck className="w-3 h-3" />
-                      <span>Verified</span>
-                    </div>
+                    {comp.verified ? (
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>Verified</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        <span>Unverified</span>
+                      </div>
+                    )}
                   </div>
 
                   <h3 className="font-heading font-extrabold text-lg text-brand-navy group-hover:text-brand-sky transition-colors mb-0.5">
@@ -121,7 +108,7 @@ export default function CompanyDiscovery() {
                     </span>
                     <span className="flex items-center gap-1 font-bold text-brand-navy">
                       <Briefcase className="w-3.5 h-3.5 text-brand-sky" />
-                      {comp.openPositionsCount} Open Roles
+                      {comp.openPositionsCount > 0 ? `${comp.openPositionsCount} Open Roles` : '0 Active Roles'}
                     </span>
                   </div>
                 </div>

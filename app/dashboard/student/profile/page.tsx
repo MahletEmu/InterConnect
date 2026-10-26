@@ -13,7 +13,14 @@ import {
   addStudentCertificate,
   deleteStudentCertificate,
 } from '@/lib/services/profileService';
-import { uploadResume, uploadAvatar, getResumeSignedUrl } from '@/lib/services/storageService';
+import { uploadResume, uploadAvatar, getResumeSignedUrl, validateImageFile } from '@/lib/services/storageService';
+import {
+  ETHIOPIAN_DEPARTMENTS,
+  ETHIOPIAN_UNIVERSITIES,
+  ETHIOPIAN_CITIES,
+} from '@/lib/data/ethiopia';
+import AcademicCombobox from '@/components/student/AcademicCombobox';
+import AcademicInfoSection from '@/components/student/AcademicInfoSection';
 import {
   GraduationCap,
   MapPin,
@@ -36,11 +43,14 @@ import {
   Download,
   UploadCloud,
   Check,
+  Camera,
+  Building,
+  BookOpen,
 } from 'lucide-react';
 
 export default function StudentProfilePage() {
   const [mobileSidebar, setMobileSidebar] = useState(false);
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { currentUser, studentProfileId, updateCurrentUser, refreshData } = useInterConnect();
 
   // Real student record or clean default state for authenticated user
@@ -48,7 +58,7 @@ export default function StudentProfilePage() {
     id: studentProfileId || user?.id || 'stud-temp',
     name: user?.name || '',
     email: user?.email || '',
-    avatar: '/images/hero-student.jpg',
+    avatar: '',
     headline: '',
     university: '',
     degree: '',
@@ -71,7 +81,7 @@ export default function StudentProfilePage() {
 
   // Modals state
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editTab, setEditTab] = useState<'general' | 'bio' | 'links' | 'resume'>('general');
+  const [editTab, setEditTab] = useState<'academic' | 'personal' | 'bio' | 'links' | 'resume'>('academic');
   const [showAddSkillModal, setShowAddSkillModal] = useState(false);
   const [showAddProjectModal, setShowAddProjectModal] = useState(false);
   const [showAddCertModal, setShowAddCertModal] = useState(false);
@@ -86,8 +96,10 @@ export default function StudentProfilePage() {
   // Profile Editor Form State
   const [editName, setEditName] = useState(currentUser?.name || user?.name || '');
   const [editHeadline, setEditHeadline] = useState(currentUser?.headline || '');
-  const [editUniversity, setEditUniversity] = useState(currentUser?.university || '');
-  const [editField, setEditField] = useState(currentUser?.fieldOfStudy || '');
+  const [editUniSelected, setEditUniSelected] = useState<string>('');
+  const [editUniCustom, setEditUniCustom] = useState<string>('');
+  const [editFieldSelected, setEditFieldSelected] = useState<string>('');
+  const [editFieldCustom, setEditFieldCustom] = useState<string>('');
   const [editGradYear, setEditGradYear] = useState(currentUser?.gradYear ? String(currentUser.gradYear) : '2026');
   const [editLocation, setEditLocation] = useState(currentUser?.location || '');
   const [editPhone, setEditPhone] = useState(currentUser?.phone || '');
@@ -98,8 +110,11 @@ export default function StudentProfilePage() {
 
   // File states
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [newResumeFile, setNewResumeFile] = useState<File | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const directAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const resumeInputRef = useRef<HTMLInputElement | null>(null);
 
   // Add Skill Form State
@@ -124,8 +139,31 @@ export default function StudentProfilePage() {
     if (currentUser) {
       setEditName(currentUser.name || user?.name || '');
       setEditHeadline(currentUser.headline || '');
-      setEditUniversity(currentUser.university || '');
-      setEditField(currentUser.fieldOfStudy || '');
+
+      const currentUni = currentUser.university || '';
+      if (!currentUni) {
+        setEditUniSelected('');
+        setEditUniCustom('');
+      } else if ((ETHIOPIAN_UNIVERSITIES as readonly string[]).includes(currentUni)) {
+        setEditUniSelected(currentUni);
+        setEditUniCustom('');
+      } else {
+        setEditUniSelected('Other University / College');
+        setEditUniCustom(currentUni);
+      }
+
+      const currentField = currentUser.fieldOfStudy || '';
+      if (!currentField) {
+        setEditFieldSelected('');
+        setEditFieldCustom('');
+      } else if ((ETHIOPIAN_DEPARTMENTS as readonly string[]).includes(currentField)) {
+        setEditFieldSelected(currentField);
+        setEditFieldCustom('');
+      } else {
+        setEditFieldSelected('Other');
+        setEditFieldCustom(currentField);
+      }
+
       setEditGradYear(currentUser.gradYear ? String(currentUser.gradYear) : '2026');
       setEditLocation(currentUser.location || '');
       setEditPhone(currentUser.phone || '');
@@ -180,6 +218,121 @@ export default function StudentProfilePage() {
     }
   };
 
+  // Direct Avatar File Select & Upload Handler
+  const handleDirectAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Client-side format & size validation
+    const validationError = validateImageFile(file, 5);
+    if (validationError) {
+      setActionError(validationError);
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    // 2. Immediate local preview
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarPreview(objectUrl);
+    setNewAvatarFile(file);
+    setActionError(null);
+
+    const targetUserId = user?.id || student.userId;
+    if (!targetUserId) {
+      setActionError('Authentication required. Please sign in to update your profile photo.');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      let finalUrl = '';
+      const { url, error: uploadErr } = await uploadAvatar(targetUserId, file, student.avatar);
+      if (url) {
+        finalUrl = url;
+      } else {
+        // Fallback to Data URL for instant, 100% reliable local photo upload
+        finalUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // 3. Persist avatar URL to profiles table if available
+      const targetProfileId = student.profileId || user?.profileId || studentProfileId || student.id;
+      const targetStudentProfId = studentProfileId || student.id;
+
+      if (targetProfileId && targetStudentProfId && url) {
+        try {
+          await updateStudentProfileInfo({
+            profileId: targetProfileId,
+            studentProfileId: targetStudentProfId,
+            avatarUrl: finalUrl,
+          });
+        } catch {}
+      }
+
+      // 4. Update immediate context state & localStorage
+      updateCurrentUser({ avatar: finalUrl });
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('interconnect_student_avatar', finalUrl);
+        } catch {}
+      }
+      setActionSuccess('Profile photo uploaded and updated successfully!');
+      await refreshData();
+      if (refreshProfile) await refreshProfile();
+    } catch (err: any) {
+      console.error('Direct avatar upload error:', err);
+      setActionError(err?.message || 'Unexpected error uploading profile photo.');
+    } finally {
+      setIsUploadingAvatar(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Remove uploaded avatar and restore student name initials
+  const handleRemoveAvatar = async () => {
+    updateCurrentUser({ avatar: '' });
+    setAvatarPreview(null);
+    setNewAvatarFile(null);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('interconnect_student_avatar');
+      } catch {}
+    }
+    const targetProfileId = student.profileId || user?.profileId || studentProfileId || student.id;
+    const targetStudentProfId = studentProfileId || student.id;
+    if (targetProfileId && targetStudentProfId) {
+      try {
+        await updateStudentProfileInfo({
+          profileId: targetProfileId,
+          studentProfileId: targetStudentProfId,
+          avatarUrl: '',
+        });
+      } catch {}
+    }
+    setActionSuccess('Profile photo removed. Displaying name initial.');
+  };
+
+  // Modal Avatar File Selection Handler (with validation & preview)
+  const handleModalAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateImageFile(file, 5);
+    if (validationError) {
+      setActionError(validationError);
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    setActionError(null);
+    setNewAvatarFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarPreview(objectUrl);
+  };
+
   // Save Full Profile Changes
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,16 +343,19 @@ export default function StudentProfilePage() {
     let updatedResumeUrl = student.resumeUrl;
 
     try {
-      const targetUserId = student.userId || user?.id;
+      const targetUserId = user?.id || student.userId;
       const targetStudentProfId = studentProfileId || student.id;
-      const targetProfileId = student.profileId || targetStudentProfId;
+      const targetProfileId = student.profileId || user?.profileId || targetStudentProfId;
 
       // 1. Upload Avatar if selected
       if (newAvatarFile && targetUserId) {
-        const { url, error: avatarErr } = await uploadAvatar(targetUserId, newAvatarFile);
-        if (!avatarErr && url) {
-          updatedAvatarUrl = url;
+        const { url, error: avatarErr } = await uploadAvatar(targetUserId, newAvatarFile, student.avatar);
+        if (avatarErr || !url) {
+          setActionError(avatarErr || 'Failed to upload profile photo.');
+          setIsSaving(false);
+          return;
         }
+        updatedAvatarUrl = url;
       }
 
       // 2. Upload Resume if selected
@@ -210,15 +366,27 @@ export default function StudentProfilePage() {
         }
       }
 
+      const effectiveUni =
+        editUniSelected === 'Other University / College'
+          ? editUniCustom.trim()
+          : editUniSelected.trim();
+
+      const effectiveField =
+        editFieldSelected === 'Other'
+          ? editFieldCustom.trim()
+          : editFieldSelected.trim();
+
+      const effectiveName = editName.trim() || student.name || user?.name || 'Student';
+
       // 3. Persist to Supabase if identifiers exist
       if (targetProfileId && targetStudentProfId) {
-        await updateStudentProfileInfo({
+        const updateRes = await updateStudentProfileInfo({
           profileId: targetProfileId,
           studentProfileId: targetStudentProfId,
-          fullName: editName.trim(),
+          fullName: effectiveName,
           avatarUrl: updatedAvatarUrl,
-          university: editUniversity.trim(),
-          fieldOfStudy: editField.trim(),
+          university: effectiveUni,
+          fieldOfStudy: effectiveField,
           graduationYear: editGradYear.trim(),
           location: editLocation.trim(),
           bio: editBio.trim(),
@@ -228,14 +396,20 @@ export default function StudentProfilePage() {
           githubUrl: editGithub.trim(),
           portfolioUrl: editPortfolio.trim(),
         });
+
+        if (!updateRes.success) {
+          setActionError(updateRes.error || 'Failed to save profile changes.');
+          setIsSaving(false);
+          return;
+        }
       }
 
       // 4. Update Context state immediately
       updateCurrentUser({
-        name: editName.trim(),
+        name: effectiveName,
         headline: editHeadline.trim(),
-        university: editUniversity.trim(),
-        fieldOfStudy: editField.trim(),
+        university: effectiveUni,
+        fieldOfStudy: effectiveField,
         gradYear: parseInt(editGradYear, 10) || 2026,
         location: editLocation.trim(),
         phone: editPhone.trim(),
@@ -249,10 +423,12 @@ export default function StudentProfilePage() {
 
       // 5. Refresh background data from Supabase
       await refreshData();
+      if (refreshProfile) await refreshProfile();
 
       setActionSuccess('Student profile updated and saved to Supabase successfully!');
       setShowEditModal(false);
       setNewAvatarFile(null);
+      setAvatarPreview(null);
       setNewResumeFile(null);
     } catch (err: any) {
       console.error('Save profile error:', err);
@@ -461,26 +637,91 @@ export default function StudentProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
 
                 <div className="flex flex-col sm:flex-row sm:items-end gap-3.5 sm:gap-4">
-                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-3 sm:border-4 border-white shadow-card bg-brand-navy shrink-0 group">
-                    <Image
-                      src={student.avatar}
-                      alt={student.name}
-                      fill
-                      className="object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditTab('resume');
-                        setShowEditModal(true);
-                      }}
-                      className="absolute inset-0 bg-brand-navy/60 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs font-bold gap-1"
-                      title="Update Avatar"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-brand-sky" />
-                      <span>Change</span>
-                    </button>
-                  </div>
+                  {(() => {
+                    const studentAvatar = avatarPreview || student.avatar;
+                    const hasUploadedPhoto = Boolean(
+                      studentAvatar &&
+                      studentAvatar.trim() !== '' &&
+                      !studentAvatar.includes('hero-student.jpg')
+                    );
+                    const studentName = student.name || user?.name || 'Student';
+                    const firstWord = studentName.trim().split(' ')[0] || 'Student';
+                    const firstLetter = firstWord.charAt(0).toUpperCase() || 'S';
+
+                    return (
+                      <div className="flex flex-col items-start gap-1.5">
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-3 sm:border-4 border-white shadow-card bg-brand-navy shrink-0 group">
+                          {hasUploadedPhoto ? (
+                            <Image
+                              src={studentAvatar}
+                              alt={studentName}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-tr from-brand-navy via-[#0f233d] to-brand-sky flex flex-col items-center justify-center text-white select-none p-1">
+                              <span className="font-heading font-black text-2xl sm:text-3xl tracking-tight leading-none mb-0.5">
+                                {firstLetter}
+                              </span>
+                              <span className="text-[10px] font-bold text-white/90 uppercase tracking-wider max-w-[72px] truncate px-1 text-center">
+                                {firstWord}
+                              </span>
+                            </div>
+                          )}
+
+                          <input
+                            ref={directAvatarInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={handleDirectAvatarSelect}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            disabled={isUploadingAvatar}
+                            onClick={() => directAvatarInputRef.current?.click()}
+                            className="absolute inset-0 bg-brand-navy/75 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-[11px] font-bold gap-1 cursor-pointer disabled:opacity-100"
+                            title="Click to upload your own profile photo"
+                          >
+                            {isUploadingAvatar ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin text-brand-sky" />
+                                <span>Uploading...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Camera className="w-4 h-4 text-brand-sky" />
+                                <span>{hasUploadedPhoto ? 'Change Photo' : 'Upload Photo'}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Direct Photo Action Buttons */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => directAvatarInputRef.current?.click()}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-sky hover:text-brand-navy transition-colors"
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>{hasUploadedPhoto ? 'Change' : 'Upload Photo'}</span>
+                          </button>
+                          {hasUploadedPhoto && (
+                            <button
+                              type="button"
+                              onClick={handleRemoveAvatar}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-700 transition-colors"
+                              title="Remove photo and display your name initial"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Remove</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
@@ -582,7 +823,7 @@ export default function StudentProfilePage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTab('general');
+                      setEditTab('academic');
                       setShowEditModal(true);
                     }}
                     className="px-4 py-1.5 rounded-xl bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold shadow-subtle transition-all flex items-center gap-1.5"
@@ -595,6 +836,9 @@ export default function StudentProfilePage() {
 
             </div>
           </div>
+
+          {/* Academic Information Section (Focused University & Department Management) */}
+          <AcademicInfoSection />
 
           {/* About Section */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-brand-border shadow-soft">
@@ -764,7 +1008,7 @@ export default function StudentProfilePage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setEditTab('general');
+                      setEditTab('academic');
                       setShowEditModal(true);
                     }}
                     className="text-xs font-bold text-brand-sky hover:underline flex items-center gap-1"
@@ -774,9 +1018,28 @@ export default function StudentProfilePage() {
                   </button>
                 </div>
                 {student.education.length === 0 ? (
-                  <p className="text-xs text-brand-muted py-2 italic">
-                    No university or degree specified yet. Click &ldquo;Edit&rdquo; above to record your academic background.
-                  </p>
+                  student.university || student.fieldOfStudy ? (
+                    <div className="space-y-1.5 py-1">
+                      <div className="flex items-start gap-2.5">
+                        <Building className="w-4 h-4 text-brand-sky shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs sm:text-sm text-brand-navy truncate">
+                            {student.university || 'Higher Education Institution'}
+                          </h4>
+                          <p className="text-xs text-brand-sky font-semibold truncate">
+                            {student.fieldOfStudy || 'Undergraduate Department'}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-brand-muted pl-6.5">
+                        Class of {student.gradYear || 2026} {student.location ? `· ${student.location}` : ''}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-brand-muted py-2 italic">
+                      No university or degree specified yet. Click &ldquo;Edit&rdquo; above to record your academic background.
+                    </p>
+                  )
                 ) : (
                   student.education.map((edu) => (
                     <div key={edu.id} className="space-y-0.5 mb-2.5 last:mb-0">
@@ -865,12 +1128,21 @@ export default function StudentProfilePage() {
             <div className="flex border-b border-brand-border px-6 gap-6 bg-white overflow-x-auto">
               <button
                 type="button"
-                onClick={() => setEditTab('general')}
+                onClick={() => setEditTab('academic')}
                 className={`py-3 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
-                  editTab === 'general' ? 'border-brand-sky text-brand-navy' : 'border-transparent text-brand-muted'
+                  editTab === 'academic' ? 'border-brand-sky text-brand-navy' : 'border-transparent text-brand-muted'
                 }`}
               >
-                Overview & Education
+                Academic Info
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditTab('personal')}
+                className={`py-3 text-xs font-bold border-b-2 transition-colors whitespace-nowrap ${
+                  editTab === 'personal' ? 'border-brand-sky text-brand-navy' : 'border-transparent text-brand-muted'
+                }`}
+              >
+                Personal Details
               </button>
               <button
                 type="button"
@@ -904,16 +1176,68 @@ export default function StudentProfilePage() {
             {/* Form */}
             <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto space-y-4 flex-1">
 
-              {editTab === 'general' && (
+              {editTab === 'academic' && (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-brand-tint/60 border border-brand-sky/20 flex items-start gap-2.5">
+                    <GraduationCap className="w-5 h-5 text-brand-navy shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-xs text-brand-navy">
+                        Academic Information
+                      </h4>
+                      <p className="text-[11px] text-brand-muted leading-relaxed">
+                        University and Department are the primary academic criteria for internship matching. Select from accredited Ethiopian institutions or choose &ldquo;Other&rdquo; to enter your custom college or department.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <AcademicCombobox
+                      id="modal-uni-combobox"
+                      label="University / Higher Education Institution"
+                      required={true}
+                      value={editUniSelected}
+                      customValue={editUniCustom}
+                      options={ETHIOPIAN_UNIVERSITIES}
+                      otherOptionLabel="Other University / College"
+                      placeholder="Select or search Ethiopian university..."
+                      customPlaceholder="Type your university or college name (e.g., Wolaita Sodo, St. Mary's)"
+                      icon={<Building className="w-4 h-4" />}
+                      helperText="Accredited Ethiopian institutions"
+                      onSelect={(opt) => setEditUniSelected(opt)}
+                      onCustomChange={(text) => setEditUniCustom(text)}
+                    />
+
+                    <AcademicCombobox
+                      id="modal-dept-combobox"
+                      label="Department / Field of Study"
+                      required={true}
+                      value={editFieldSelected}
+                      customValue={editFieldCustom}
+                      options={ETHIOPIAN_DEPARTMENTS}
+                      otherOptionLabel="Other"
+                      placeholder="Select or search your department..."
+                      customPlaceholder="Type your department or program (e.g., Data Science, Civil Eng)"
+                      icon={<BookOpen className="w-4 h-4" />}
+                      helperText="Program of study"
+                      onSelect={(opt) => setEditFieldSelected(opt)}
+                      onCustomChange={(text) => setEditFieldCustom(text)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {editTab === 'personal' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1">
-                        Full Name *
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted">
+                          Full Name
+                        </label>
+                        <span className="text-[11px] text-brand-muted">(optional update)</span>
+                      </div>
                       <input
                         type="text"
-                        required
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         placeholder="e.g., Mahlet Abebe"
@@ -921,41 +1245,17 @@ export default function StudentProfilePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1">
-                        Headline / Role Focus
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted">
+                          Headline / Role Focus
+                        </label>
+                        <span className="text-[11px] text-brand-muted">(optional)</span>
+                      </div>
                       <input
                         type="text"
                         value={editHeadline}
                         onChange={(e) => setEditHeadline(e.target.value)}
                         placeholder="e.g., Software Engineering Intern"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-brand-canvas border border-brand-border text-xs sm:text-sm text-brand-text focus:outline-none focus:border-brand-sky focus:bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1">
-                        University / Institute
-                      </label>
-                      <input
-                        type="text"
-                        value={editUniversity}
-                        onChange={(e) => setEditUniversity(e.target.value)}
-                        placeholder="e.g., Bahir Dar University"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-brand-canvas border border-brand-border text-xs sm:text-sm text-brand-text focus:outline-none focus:border-brand-sky focus:bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1">
-                        Field of Study / Major
-                      </label>
-                      <input
-                        type="text"
-                        value={editField}
-                        onChange={(e) => setEditField(e.target.value)}
-                        placeholder="e.g., Computer Science"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-brand-canvas border border-brand-border text-xs sm:text-sm text-brand-text focus:outline-none focus:border-brand-sky focus:bg-white"
                       />
                     </div>
@@ -967,7 +1267,7 @@ export default function StudentProfilePage() {
                         Graduation Year
                       </label>
                       <input
-                        type="number"
+                        type="text"
                         value={editGradYear}
                         onChange={(e) => setEditGradYear(e.target.value)}
                         placeholder="e.g., 2026"
@@ -976,15 +1276,21 @@ export default function StudentProfilePage() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1">
-                        Location / City
+                        Location
                       </label>
                       <input
                         type="text"
+                        list="ethiopian-cities-list"
                         value={editLocation}
                         onChange={(e) => setEditLocation(e.target.value)}
                         placeholder="e.g., Addis Ababa, Ethiopia"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-brand-canvas border border-brand-border text-xs sm:text-sm text-brand-text focus:outline-none focus:border-brand-sky focus:bg-white"
                       />
+                      <datalist id="ethiopian-cities-list">
+                        {ETHIOPIAN_CITIES.map((city) => (
+                          <option key={city} value={city} />
+                        ))}
+                      </datalist>
                     </div>
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-brand-muted mb-1">
@@ -1113,32 +1419,65 @@ export default function StudentProfilePage() {
 
                   {/* Avatar Upload */}
                   <div className="p-4 rounded-3xl border border-brand-border bg-brand-canvas/50">
-                    <span className="text-xs font-bold uppercase tracking-wider text-brand-navy block mb-2">
-                      Profile Avatar Picture
-                    </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-brand-navy">
+                        Profile Avatar Picture
+                      </span>
+                      <span className="text-[11px] text-brand-muted">
+                        JPEG, PNG, or WebP (max 5MB)
+                      </span>
+                    </div>
+
                     <input
                       ref={avatarInputRef}
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
-                      onChange={(e) => {
-                        if (e.target.files?.[0]) setNewAvatarFile(e.target.files[0]);
-                      }}
+                      onChange={handleModalAvatarSelect}
                       className="hidden"
                     />
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => avatarInputRef.current?.click()}
-                        className="px-4 py-2 rounded-xl bg-white border border-brand-border hover:bg-brand-tint text-brand-navy text-xs font-bold flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <UploadCloud className="w-4 h-4 text-brand-sky" />
-                        <span>{newAvatarFile ? 'Change Image' : 'Select Avatar Image'}</span>
-                      </button>
-                      {newAvatarFile && (
-                        <span className="text-xs font-bold text-brand-navy truncate">
-                          Selected: {newAvatarFile.name}
-                        </span>
-                      )}
+
+                    <div className="flex items-center gap-4">
+                      {/* Avatar preview */}
+                      <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-brand-sky shadow-subtle shrink-0 bg-brand-navy">
+                        <Image
+                          src={avatarPreview || student.avatar}
+                          alt="Avatar preview"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => avatarInputRef.current?.click()}
+                            className="px-4 py-2 rounded-xl bg-white border border-brand-border hover:bg-brand-tint text-brand-navy text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors"
+                          >
+                            <UploadCloud className="w-4 h-4 text-brand-sky" />
+                            <span>{newAvatarFile ? 'Choose Different Image' : 'Select New Image'}</span>
+                          </button>
+                          {newAvatarFile && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewAvatarFile(null);
+                                setAvatarPreview(null);
+                                if (avatarInputRef.current) avatarInputRef.current.value = '';
+                              }}
+                              className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs font-bold transition-colors"
+                              title="Cancel selection"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        {newAvatarFile && (
+                          <p className="text-xs font-semibold text-emerald-700 mt-1 truncate">
+                            Ready to save: {newAvatarFile.name} ({(newAvatarFile.size / 1024).toFixed(0)} KB)
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

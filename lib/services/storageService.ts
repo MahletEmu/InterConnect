@@ -21,11 +21,36 @@ const RESUME_TYPES = [
 ];
 
 /**
+ * Validate an image file specifically (JPEG, PNG, WebP) with size limit.
+ */
+export function validateImageFile(file: File, maxMb = 5): string | null {
+  if (!file) return 'No image file selected.';
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  const validExts = ['jpg', 'jpeg', 'png', 'webp'];
+  const typeMatches = allowedTypes.includes(file.type.toLowerCase()) || validExts.includes(ext);
+
+  if (!typeMatches) {
+    return 'Invalid image format. Supported formats: JPEG, PNG, and WebP.';
+  }
+  if (file.size > maxMb * 1024 * 1024) {
+    return `Image size exceeds the ${maxMb}MB limit. Please select a smaller photo.`;
+  }
+  return null;
+}
+
+/**
  * Validate a file against type and size limits.
  */
 function validateFile(file: File, allowedTypes: string[], maxBytes: number): string | null {
   if (!file) return 'No file selected.';
-  if (!allowedTypes.includes(file.type)) {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  const validExts = allowedTypes
+    .map((t) => t.split('/')[1]?.replace('vnd.openxmlformats-officedocument.wordprocessingml.document', 'docx').toLowerCase())
+    .filter(Boolean);
+  const typeMatches = allowedTypes.includes(file.type.toLowerCase()) || (ext && (validExts.includes(ext) || (ext === 'jpg' && validExts.includes('jpeg'))));
+
+  if (!typeMatches) {
     const extensions = allowedTypes
       .map((t) => t.split('/')[1]?.replace('vnd.openxmlformats-officedocument.wordprocessingml.document', 'docx'))
       .join(', ');
@@ -39,32 +64,72 @@ function validateFile(file: File, allowedTypes: string[], maxBytes: number): str
 }
 
 /**
- * Upload a student profile avatar image.
+ * Upload a profile avatar image (Student or Company).
+ * Uploads to Supabase Storage `avatars` bucket under a user-specific folder:
+ * `${userId}/avatar-${Date.now()}.${ext}`
  * Type: JPEG, PNG, WebP | Max size: 5 MB
  */
 export async function uploadAvatar(
   userId: string,
-  file: File
+  file: File,
+  oldAvatarUrl?: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const validationError = validateFile(file, IMAGE_TYPES, 5 * 1024 * 1024);
+  const validationError = validateImageFile(file, 5);
   if (validationError) return { url: null, error: validationError };
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const filePath = `${userId}/avatar-${Date.now()}.${ext}`;
+  // Resolve current authenticated user to guarantee user-isolation
+  let effectiveUserId = userId;
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData.user?.id) {
+      effectiveUserId = authData.user.id;
+    }
+  } catch (err) {
+    console.warn('Could not verify current auth user for avatar upload:', err);
+  }
+
+  if (!effectiveUserId || effectiveUserId === 'stud-temp' || effectiveUserId === 'comp-temp') {
+    return { url: null, error: 'Authentication required. Please sign in before uploading a profile photo.' };
+  }
+
+  const rawExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
+  const filePath = `${effectiveUserId}/avatar-${Date.now()}.${ext}`;
 
   try {
     const { data, error } = await supabase.storage
       .from(BUCKETS.AVATARS)
-      .upload(filePath, file, { upsert: true, contentType: file.type });
+      .upload(filePath, file, {
+        upsert: true,
+        contentType: file.type || (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'),
+      });
 
     if (error) {
       console.error('Avatar upload error:', error.message);
+      if (error.message.toLowerCase().includes('security') || error.message.toLowerCase().includes('policy')) {
+        return {
+          url: null,
+          error: 'Storage policy prevented avatar upload. Ensure you are signed in and storage policies are applied.',
+        };
+      }
       return { url: null, error: error.message };
     }
 
     const { data: publicUrlData } = supabase.storage
       .from(BUCKETS.AVATARS)
       .getPublicUrl(data.path);
+
+    // Clean up previous avatar from avatars bucket if it belongs to this user
+    if (oldAvatarUrl && oldAvatarUrl.includes(`/${BUCKETS.AVATARS}/`)) {
+      try {
+        const oldPath = oldAvatarUrl.split(`/${BUCKETS.AVATARS}/`)[1]?.split('?')[0];
+        if (oldPath && oldPath.startsWith(`${effectiveUserId}/`) && oldPath !== data.path) {
+          await supabase.storage.from(BUCKETS.AVATARS).remove([oldPath]);
+        }
+      } catch (cleanupErr) {
+        console.warn('Old avatar cleanup skipped:', cleanupErr);
+      }
+    }
 
     return { url: publicUrlData.publicUrl, error: null };
   } catch (err: any) {

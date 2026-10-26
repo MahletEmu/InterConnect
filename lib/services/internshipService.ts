@@ -16,6 +16,11 @@ export interface InternshipFilters {
   pageSize?: number;
 }
 
+export const EXCLUDED_INTERNSHIP_IDS = [
+  'efcab36e-b7ed-424d-86fb-0d11a3406792',
+  'a64a4ddd-b6d2-48f2-85ef-da0bfd12ee2c',
+];
+
 /**
  * Fetch published internships with optional search/filter/pagination.
  * Falls back to mock data if Supabase is not configured.
@@ -58,6 +63,9 @@ export async function fetchInternships(filters: InternshipFilters = {}) {
     `)
     .eq('status', 'published');
 
+  // Filter out fake test data
+  query = query.not('id', 'in', `(${EXCLUDED_INTERNSHIP_IDS.join(',')})`);
+
   if (search) {
     query = query.ilike('title', `%${search}%`);
   }
@@ -91,13 +99,25 @@ export async function fetchInternships(filters: InternshipFilters = {}) {
     return { data: [], count: 0, error };
   }
 
-  return { data: data || [], count: count || 0, error: null };
+  const cleanData = (data || []).filter((item: any) => {
+    if (EXCLUDED_INTERNSHIP_IDS.includes(item.id)) return false;
+    const titleLower = item.title?.toLowerCase() || '';
+    const companyLower = item.company_profiles?.company_name?.toLowerCase() || '';
+    if (titleLower.includes('softmock') || companyLower.includes('softnock')) return false;
+    return true;
+  });
+
+  return { data: cleanData, count: cleanData.length, error: null };
 }
 
 /**
  * Fetch a single internship by ID.
  */
 export async function fetchInternshipById(id: string) {
+  if (EXCLUDED_INTERNSHIP_IDS.includes(id)) {
+    return { data: null, error: { message: 'Internship not found' } };
+  }
+
   const { data, error } = await supabase
     .from('internships')
     .select(`
@@ -121,6 +141,13 @@ export async function fetchInternshipById(id: string) {
   if (error) {
     console.error('fetchInternshipById error:', error);
     return { data: null, error };
+  }
+
+  if (
+    data?.title?.toLowerCase().includes('softmock') ||
+    (data?.company_profiles as any)?.company_name?.toLowerCase().includes('softnock')
+  ) {
+    return { data: null, error: { message: 'Internship not found' } };
   }
 
   return { data, error: null };
@@ -240,5 +267,12 @@ export async function fetchCompanyInternships(companyProfileId: string) {
     return { data: [], error };
   }
 
-  return { data: data || [], error: null };
+  const cleanData = (data || []).filter((item: any) => {
+    if (EXCLUDED_INTERNSHIP_IDS.includes(item.id)) return false;
+    const titleLower = item.title?.toLowerCase() || '';
+    if (titleLower.includes('softmock')) return false;
+    return true;
+  });
+
+  return { data: cleanData, error: null };
 }

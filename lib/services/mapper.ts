@@ -1,3 +1,4 @@
+
 import {
   Internship,
   Application,
@@ -42,43 +43,35 @@ export function mapDbInternshipToFrontend(db: any): Internship {
         .filter((n: any): n is string => Boolean(n))
     : [];
 
-  const defaultSkills = ['TypeScript', 'React', 'Problem Solving'];
-
   return {
     id: db.id,
     companyId: company.id,
     company,
     title: db.title || 'Internship Position',
     type: workplaceTypeMap[db.workplace_type?.toLowerCase()] || 'Remote',
-    location: db.location || 'Remote',
-    duration: db.duration || '3 Months',
-    stipend: db.stipend || '$1,500 / month',
-    postedDate: db.created_at ? new Date(db.created_at).toLocaleDateString() : 'Recently',
-    matchScore: 92,
-    matchBreakdown: { skills: 95, education: 90, location: 92, interests: 88 },
-    matchReasons: ['Skills alignment with coursework', 'Verified employer rating'],
-    description: db.description || 'Great opportunity to learn and grow in a fast-paced environment.',
-    responsibilities: Array.isArray(db.responsibilities) && db.responsibilities.length > 0
-      ? db.responsibilities
-      : [
-          'Collaborate with engineering and product teams to implement core features.',
-          'Participate in sprint planning, design sessions, and daily stand-ups.',
-          'Write high-quality, testable, and well-documented code.',
-        ],
-    requirements: Array.isArray(db.requirements) && db.requirements.length > 0
-      ? db.requirements
-      : [
-          'Enrolled in Computer Science, Software Engineering, or related technical degree.',
-          'Solid fundamentals in data structures, algorithms, and web technologies.',
-          'Passion for learning and strong collaborative problem-solving mindset.',
-        ],
-    requiredSkills: skills.length > 0 ? skills : defaultSkills,
-    preferredSkills: ['Git', 'REST APIs', 'Cloud Technologies'],
-    benefits: ['Dedicated 1-on-1 Mentor', 'Flexible Working Hours', 'Certificate of Completion'],
-    department: db.internship_type || 'Engineering',
+    location: db.location || 'Location Unspecified',
+    duration: db.duration || 'Flexible Duration',
+    stipend: db.stipend || 'Stipend to be disclosed',
+    postedDate: db.created_at ? new Date(db.created_at).toLocaleDateString() : '',
+    applicationDeadline: db.application_deadline || undefined,
+    isExpired: db.status === 'closed'
+      ? true
+      : db.application_deadline
+      ? new Date(db.application_deadline).getTime() < new Date().setHours(0, 0, 0, 0) && db.status !== 'published'
+      : false,
+    matchScore: 0,
+    matchBreakdown: { skills: 0, education: 0, location: 0, interests: 0 },
+    matchReasons: [],
+    description: db.description || 'No detailed description provided for this opportunity.',
+    responsibilities: Array.isArray(db.responsibilities) ? db.responsibilities : [],
+    requirements: Array.isArray(db.requirements) ? db.requirements : [],
+    requiredSkills: skills,
+    preferredSkills: [],
+    benefits: Array.isArray(db.benefits) ? db.benefits : [],
+    department: db.internship_type || companyProfile.industry || 'General',
     industry: companyProfile.industry || 'Technology',
     applicantsCount: 0,
-    featured: true,
+    featured: Boolean(db.featured),
     status: db.status || 'draft',
   };
 }
@@ -135,7 +128,7 @@ export function mapDbApplicationToFrontend(
         location: 'Remote',
         duration: 'Flexible',
         stipend: 'Competitive',
-        postedDate: 'Recently',
+        postedDate: '',
         matchScore: 85,
         matchBreakdown: { skills: 85, education: 80, location: 90, interests: 85 },
         applicantsCount: 0,

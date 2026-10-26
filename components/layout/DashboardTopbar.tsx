@@ -24,7 +24,7 @@ interface DashboardTopbarProps {
 
 export default function DashboardTopbar({ onToggleMobileMenu }: DashboardTopbarProps) {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const {
     role,
     currentUser,
@@ -174,24 +174,48 @@ export default function DashboardTopbar({ onToggleMobileMenu }: DashboardTopbarP
           >
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-brand-sky bg-brand-navy shrink-0">
               {role === 'company' ? (
-                <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
-                  ⚡
-                </div>
-              ) : (
-                <Image
-                  src={currentUser?.avatar || '/images/hero-student.jpg'}
-                  alt="Avatar"
-                  fill
-                  className="object-cover"
-                />
-              )}
+                currentCompany?.logo && (currentCompany.logo.startsWith('http') || currentCompany.logo.startsWith('/')) ? (
+                  <Image
+                    src={currentCompany.logo}
+                    alt="Company Logo"
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs bg-brand-navy">
+                    {currentCompany?.logo?.length === 2 ? currentCompany.logo : (currentCompany?.name ? currentCompany.name.slice(0, 2).toUpperCase() : 'CO')}
+                  </div>
+                )
+              ) : (() => {
+                const studentAvatar = currentUser?.avatar || user?.avatar;
+                const hasUploadedPhoto = Boolean(
+                  studentAvatar &&
+                  studentAvatar.trim() !== '' &&
+                  !studentAvatar.includes('hero-student.jpg')
+                );
+                const studentName = currentUser?.name || user?.name || 'Student';
+                const firstLetter = studentName.trim().charAt(0).toUpperCase() || 'S';
+
+                return hasUploadedPhoto ? (
+                  <Image
+                    src={studentAvatar!}
+                    alt={studentName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-xs bg-gradient-to-tr from-brand-navy to-brand-sky select-none">
+                    {firstLetter}
+                  </div>
+                );
+              })()}
             </div>
             <div className="hidden md:block text-left">
               <span className="block text-xs font-bold text-brand-navy leading-tight">
-                {role === 'company' ? currentCompany?.name : currentUser?.name}
+                {role === 'company' ? (currentCompany?.name || user?.name || 'Company') : (currentUser?.name || user?.name || 'Student')}
               </span>
               <span className="text-[10px] text-brand-muted block capitalize">
-                {role === 'company' ? 'Recruiting Team' : 'AAiT CS Junior'}
+                {role === 'company' ? 'Hiring Partner' : (currentUser?.headline || 'Verified Student')}
               </span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-brand-muted hidden md:block" />
@@ -208,7 +232,7 @@ export default function DashboardTopbar({ onToggleMobileMenu }: DashboardTopbarP
                 <div className="p-3 border-b border-brand-border/60">
                   <p className="text-xs font-bold text-brand-navy">Signed in as</p>
                   <p className="text-[11px] text-brand-muted truncate">
-                    {role === 'company' ? 'recruiting@novasystems.io' : currentUser?.email}
+                    {user?.email || (role === 'company' ? 'Employer' : currentUser?.email)}
                   </p>
                 </div>
 

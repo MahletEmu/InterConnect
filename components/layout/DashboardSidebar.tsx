@@ -20,6 +20,7 @@ import {
   Building,
   ArrowLeftRight,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface DashboardSidebarProps {
@@ -33,7 +34,14 @@ export default function DashboardSidebar({ mobileOpen, onCloseMobile }: Dashboar
   const { user, signOut } = useAuth();
   const { role, switchRole, currentUser, currentCompany, savedInternshipIds, unreadCount } = useInterConnect();
 
-  const studentLinks = [
+  interface NavLinkItem {
+    name: string;
+    href: string;
+    icon: any;
+    badge?: number;
+  }
+
+  const studentLinks: NavLinkItem[] = [
     { name: 'Overview', href: '/dashboard/student', icon: LayoutDashboard },
     { name: 'Discover Internships', href: '/internships', icon: Compass },
     { name: 'Applications', href: '/dashboard/student/applications', icon: Send },
@@ -54,7 +62,7 @@ export default function DashboardSidebar({ mobileOpen, onCloseMobile }: Dashboar
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
-  const companyLinks = [
+  const companyLinks: NavLinkItem[] = [
     { name: 'Overview', href: '/dashboard/company', icon: LayoutDashboard },
     { name: 'Internship Positions', href: '/dashboard/company/internships', icon: Briefcase },
     { name: 'Candidates Search', href: '/dashboard/company/candidates', icon: Users },
@@ -66,7 +74,16 @@ export default function DashboardSidebar({ mobileOpen, onCloseMobile }: Dashboar
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
-  const links = role === 'company' ? companyLinks : studentLinks;
+  const adminLinks: NavLinkItem[] = [
+    { name: 'Admin Overview', href: '/dashboard/admin', icon: LayoutDashboard },
+    { name: 'Company Verification', href: '/dashboard/admin', icon: Building },
+    { name: 'Internship Listings', href: '/dashboard/admin', icon: Briefcase },
+    { name: 'Applications Moderation', href: '/dashboard/admin', icon: Send },
+    { name: 'Public Directory', href: '/companies', icon: Compass },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  const links: NavLinkItem[] = user?.role === 'admin' ? adminLinks : role === 'company' ? companyLinks : studentLinks;
 
   return (
     <>
@@ -105,11 +122,11 @@ export default function DashboardSidebar({ mobileOpen, onCloseMobile }: Dashboar
           <div className="p-3 border-b border-brand-border bg-brand-canvas/50">
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="font-extrabold uppercase tracking-wider text-brand-muted text-[10px]">
-                Active Role Portal
+                {user?.role === 'admin' ? 'Security & Moderation' : 'Active Role Portal'}
               </span>
               {user ? (
                 <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
-                  Verified
+                  {user?.role === 'admin' ? 'Authorized Admin' : 'Verified'}
                 </span>
               ) : (
                 <button
@@ -128,14 +145,14 @@ export default function DashboardSidebar({ mobileOpen, onCloseMobile }: Dashboar
 
             <div className="flex items-center gap-2 p-1.5 rounded-xl bg-white border border-brand-border shadow-2xs">
               <div className="w-6 h-6 rounded-lg bg-brand-tint flex items-center justify-center text-brand-navy font-bold text-[11px]">
-                {role === 'company' ? '⚡' : 'AM'}
+                {user?.role === 'admin' ? '🛡️' : role === 'company' ? '⚡' : 'AM'}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-brand-navy truncate">
-                  {role === 'company' ? currentCompany?.name : currentUser?.name}
+                  {user?.role === 'admin' ? user.email : role === 'company' ? currentCompany?.name : currentUser?.name}
                 </p>
                 <p className="text-[10px] text-brand-muted truncate capitalize">
-                  {role === 'company' ? 'Recruiter ATS' : 'Student Innovator'}
+                  {user?.role === 'admin' ? 'Platform Administrator' : role === 'company' ? 'Recruiter ATS' : 'Student Innovator'}
                 </p>
               </div>
             </div>

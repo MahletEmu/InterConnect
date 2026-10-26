@@ -5,6 +5,7 @@ import Link from 'next/link';
 import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import DashboardTopbar from '@/components/layout/DashboardTopbar';
 import { useInterConnect } from '@/lib/context/InterConnectContext';
+import { evaluateHonestMatch } from '@/lib/services/matchingService';
 import {
   Bookmark,
   MapPin,
@@ -18,7 +19,7 @@ import {
 
 export default function StudentSavedPage() {
   const [mobileSidebar, setMobileSidebar] = useState(false);
-  const { internships, savedInternshipIds, toggleSaveInternship } = useInterConnect();
+  const { internships, savedInternshipIds, toggleSaveInternship, currentUser } = useInterConnect();
 
   const savedList = internships.filter((i) => savedInternshipIds.includes(i.id));
 
@@ -67,11 +68,13 @@ export default function StudentSavedPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-              {savedList.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl p-5 border border-brand-border shadow-soft hover:shadow-card transition-all flex flex-col justify-between group"
-                >
+              {savedList.map((item) => {
+                const match = evaluateHonestMatch(currentUser, item);
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl p-5 border border-brand-border shadow-soft hover:shadow-card transition-all flex flex-col justify-between group"
+                  >
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
@@ -99,12 +102,19 @@ export default function StudentSavedPage() {
                       </h3>
                     </Link>
 
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-tint text-brand-navy text-xs font-black mb-3">
-                      <Sparkles className="w-3 h-3 text-brand-sky" />
-                      <span>{item.matchScore}% Match</span>
-                    </div>
+                    {item.isExpired ? (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold mb-3">
+                        <Clock className="w-3 h-3 text-rose-500" />
+                        <span>Closed ({item.applicationDeadline || 'Deadline passed'})</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-tint text-brand-navy text-xs font-bold mb-3">
+                        <Sparkles className="w-3 h-3 text-brand-sky" />
+                        <span>{match.score !== null ? `${match.score}% Fit · ${match.label}` : item.department || 'Verified Role'}</span>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-brand-muted mb-3">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-brand-muted mb-3 font-medium">
                       <span className="flex items-center gap-1 truncate">
                         <MapPin className="w-3.5 h-3.5 text-brand-sky shrink-0" />
                         {item.type}
@@ -129,16 +139,27 @@ export default function StudentSavedPage() {
 
                   <div className="pt-3 border-t border-brand-border/60 flex items-center justify-between">
                     <span className="text-[10px] text-brand-muted">{item.duration.split('(')[0]}</span>
-                    <Link
-                      href={`/internships/${item.id}`}
-                      className="px-4 py-2 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold transition-all shadow-subtle flex items-center gap-1"
-                    >
-                      <span>Apply</span>
-                      <ArrowRight className="w-3 h-3 text-brand-sky" />
-                    </Link>
+                    {item.isExpired ? (
+                      <Link
+                        href={`/internships/${item.id}`}
+                        className="px-3.5 py-1.5 rounded-full bg-brand-canvas hover:bg-brand-border/40 text-brand-muted text-xs font-bold transition-all flex items-center gap-1"
+                      >
+                        <span>View Archive</span>
+                        <ArrowRight className="w-3 h-3 text-brand-muted" />
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/internships/${item.id}`}
+                        className="px-4 py-1.5 rounded-full bg-brand-navy hover:bg-brand-navyLight text-white text-xs font-bold transition-all shadow-subtle flex items-center gap-1"
+                      >
+                        <span>View & Apply</span>
+                        <ArrowRight className="w-3 h-3 text-brand-sky" />
+                      </Link>
+                    )}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           )}
 

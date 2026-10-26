@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import DashboardSidebar from '@/components/layout/DashboardSidebar';
@@ -8,6 +8,7 @@ import DashboardTopbar from '@/components/layout/DashboardTopbar';
 import { useInterConnect } from '@/lib/context/InterConnectContext';
 import { useAuth } from '@/lib/context/AuthContext';
 import { updateCompanyProfileInfo } from '@/lib/services/profileService';
+import { uploadAvatar, validateImageFile } from '@/lib/services/storageService';
 import {
   Building,
   Globe,
@@ -21,12 +22,14 @@ import {
   Briefcase,
   ShieldCheck,
   Sparkles,
+  Camera,
+  UploadCloud,
 } from 'lucide-react';
 
 export default function CompanyProfilePage() {
   const [mobileSidebar, setMobileSidebar] = useState(false);
-  const { user } = useAuth();
-  const { currentCompany, companyProfileId, refreshData } = useInterConnect();
+  const { user, refreshProfile } = useAuth();
+  const { currentCompany, companyProfileId, updateCurrentCompany, refreshData } = useInterConnect();
 
   // Form State
   const [companyName, setCompanyName] = useState('');
@@ -36,6 +39,11 @@ export default function CompanyProfilePage() {
   const [website, setWebsite] = useState('');
   const [description, setDescription] = useState('');
   const [mission, setMission] = useState('');
+
+  // Logo state
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Status feedback
   const [isSaving, setIsSaving] = useState(false);
@@ -56,6 +64,66 @@ export default function CompanyProfilePage() {
       setCompanyName(user.name || '');
     }
   }, [currentCompany, user]);
+
+  // Handle logo file selection and upload
+  const handleLogoFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. Client-side format & size validation
+    const validationError = validateImageFile(file, 5);
+    if (validationError) {
+      setSaveError(validationError);
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    // 2. Immediate preview
+    const objectUrl = URL.createObjectURL(file);
+    setLogoPreview(objectUrl);
+    setSaveError(null);
+
+    const effectiveUserId = user?.id || currentCompany?.userId;
+    if (!effectiveUserId) {
+      setSaveError('Authentication required. Please sign in to upload a logo.');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const { url, error: uploadErr } = await uploadAvatar(effectiveUserId, file, currentCompany?.logo);
+      if (uploadErr || !url) {
+        setSaveError(uploadErr || 'Failed to upload company logo.');
+        setLogoPreview(null);
+        return;
+      }
+
+      // Persist to company_profiles & profiles
+      const effectiveCompanyId = companyProfileId || currentCompany?.id;
+      const effectiveProfileId = currentCompany?.profileId || user?.profileId || user?.id;
+
+      if (effectiveCompanyId && effectiveProfileId) {
+        await updateCompanyProfileInfo({
+          profileId: effectiveProfileId,
+          companyProfileId: effectiveCompanyId,
+          companyName: companyName.trim() || currentCompany?.name || 'Company',
+          logoUrl: url,
+        });
+      }
+
+      updateCurrentCompany({ logo: url });
+      setSaveSuccess('Company logo uploaded and updated successfully!');
+      await refreshData();
+      if (refreshProfile) await refreshProfile();
+      setTimeout(() => setSaveSuccess(null), 4000);
+    } catch (err: any) {
+      console.error('Company logo upload error:', err);
+      setSaveError(err?.message || 'Unexpected error uploading company logo.');
+    } finally {
+      setIsUploadingLogo(false);
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,20 +232,70 @@ export default function CompanyProfilePage() {
 
             <form onSubmit={handleSubmit} className="p-5 sm:p-6 -mt-10 sm:-mt-12 space-y-5">
 
-              {/* Logo / Badge */}
-              <div className="flex items-end gap-4 mb-2">
-                <div className="w-20 h-20 rounded-2xl bg-brand-canvas border-4 border-white shadow-card flex items-center justify-center font-heading font-black text-2xl text-brand-navy">
-                  {currentCompany?.logo?.length === 2 ? currentCompany.logo : (companyName ? companyName.slice(0, 2).toUpperCase() : 'CO')}
-                </div>
-                <div className="pb-2">
-                  <h3 className="font-heading font-extrabold text-lg text-brand-navy">
-                    {companyName || 'Your Enterprise Brand'}
-                  </h3>
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-brand-sky">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Verified Hiring Partner</span>
+              {/* Logo / Badge & Upload */}
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2 pb-2 border-b border-brand-border/60">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-20 h-20 rounded-2xl bg-brand-canvas border-4 border-white shadow-card flex items-center justify-center font-heading font-black text-2xl text-brand-navy overflow-hidden shrink-0 group">
+                    {(logoPreview || currentCompany?.logo) && (logoPreview?.startsWith('blob:') || currentCompany?.logo?.startsWith('http') || currentCompany?.logo?.startsWith('/')) ? (
+                      <Image
+                        src={logoPreview || currentCompany!.logo}
+                        alt="Company Logo"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span>{currentCompany?.logo?.length === 2 ? currentCompany.logo : (companyName ? companyName.slice(0, 2).toUpperCase() : 'CO')}</span>
+                    )}
+
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleLogoFileSelect}
+                      className="hidden"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={isUploadingLogo}
+                      onClick={() => logoInputRef.current?.click()}
+                      className="absolute inset-0 bg-brand-navy/70 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-[10px] font-bold gap-1 cursor-pointer disabled:opacity-100"
+                      title="Upload company logo or icon"
+                    >
+                      {isUploadingLogo ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-brand-sky" />
+                      ) : (
+                        <>
+                          <Camera className="w-3.5 h-3.5 text-brand-sky" />
+                          <span>Change</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div>
+                    <h3 className="font-heading font-extrabold text-lg text-brand-navy">
+                      {companyName || 'Your Enterprise Brand'}
+                    </h3>
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-brand-sky mt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Verified Hiring Partner</span>
+                    </div>
+                    <p className="text-[11px] text-brand-muted mt-1">
+                      JPEG, PNG, or WebP up to 5MB
+                    </p>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  disabled={isUploadingLogo}
+                  onClick={() => logoInputRef.current?.click()}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-brand-border hover:bg-brand-tint text-brand-navy text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 self-start sm:self-auto disabled:opacity-50"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-brand-sky" />
+                  <span>{isUploadingLogo ? 'Uploading Logo...' : 'Upload Company Logo'}</span>
+                </button>
               </div>
 
               {/* Grid 1: Name & Industry */}

@@ -31,10 +31,10 @@ export default function ForCompaniesSection() {
             <span className="text-xs uppercase tracking-widest font-extrabold text-brand-sky bg-brand-navyLight px-3 py-1 rounded-full border border-brand-sky/20 mb-3">
               Enterprise & Startup Recruitment
             </span>
-            <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4.5xl text-white leading-tight tracking-tight mb-3">
+            <h2 className="font-heading font-extrabold text-3xl sm:text-4xl lg:text-4xl text-white leading-tight tracking-tight mb-3">
               Meet the Talent Behind Tomorrow.
             </h2>
-            <p className="text-brand-tint/80 text-sm sm:text-base leading-relaxed mb-6">
+            <p className="text-slate-200 text-sm sm:text-base leading-relaxed mb-6">
               Find motivated student innovators before they become everyone else&apos;s top candidate. Source from top academic departments with verified coding skills and proven project repositories.
             </p>
 
